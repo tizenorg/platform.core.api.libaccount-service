@@ -26,7 +26,7 @@
 #include <unistd.h>
 #endif
 #include <vconf.h>
-#include <security-server.h>
+//#include <security-server.h>
 
 #include "account.h"
 #include "account-error.h"
@@ -41,7 +41,7 @@
 #define ACCOUNT_DB_OPEN_READWRITE 1
 
 #define VCONF_OK 0
-
+/*
 #define _GET_COOKIE	int ret_code = 0;\
 char *e_cookie = NULL;\
 char cookie[256] = {0,};\
@@ -59,7 +59,7 @@ if (e_cookie == NULL) {\
 	_ERR("g_base64_encode() is failed.");\
 	return ACCOUNT_ERROR_PERMISSION_DENIED;\
 }
-
+*/
 static AccountManager *_acc_mgr = NULL;
 
 static char *_account_get_text(const char *text_data);
@@ -304,7 +304,7 @@ ACCOUNT_API int account_insert_to_db(account_h account, int *account_db_id)
 	ACCOUNT_RETURN_VAL((account != NULL), {}, ACCOUNT_ERROR_INVALID_PARAMETER, ("ACCOUNT HANDLE IS NULL"));
 	ACCOUNT_RETURN_VAL((account_db_id != NULL), {}, ACCOUNT_ERROR_INVALID_PARAMETER, ("ACCOUNT ID POINTER IS NULL"));
 
-	_GET_COOKIE
+//	_GET_COOKIE
 
 	account_s *account_data = (account_s*) account;
 	int error_code = ACCOUNT_ERROR_NONE;
@@ -318,7 +318,8 @@ ACCOUNT_API int account_insert_to_db(account_h account, int *account_db_id)
 	GVariant* account_serialized = marshal_account(account_data);
 
 	_INFO("3. Before account_manager_call_account_add_sync");
-	bool is_success = account_manager_call_account_add_sync(acc_mgr, account_db_path, account_serialized, e_cookie, &db_id, NULL, &error);
+	bool is_success = account_manager_call_account_add_sync(acc_mgr, account_db_path, account_serialized, &db_id, NULL, &error);
+//	bool is_success = account_manager_call_account_add_sync(acc_mgr, account_db_path, account_serialized, e_cookie, &db_id, NULL, &error);
 	ACCOUNT_CATCH_ERROR((is_success != false), {}, _account_get_error_code(is_success, error), "Failed to get dbus.");
 
 	*account_db_id = db_id;
@@ -342,7 +343,7 @@ ACCOUNT_API int account_delete_from_db_by_id(int account_db_id)
 
 	ACCOUNT_RETURN_VAL((account_db_id > 0), {}, ACCOUNT_ERROR_INVALID_PARAMETER, ("ACCOUNT ID IS LESS THAN ZERO."));
 
-	_GET_COOKIE
+//	_GET_COOKIE
 
 	GError *error = NULL;
 
@@ -355,7 +356,8 @@ ACCOUNT_API int account_delete_from_db_by_id(int account_db_id)
 
 	_INFO("2. Before account_manager_call_account_query_account_by_account_id_sync");
 	GVariant *account_serialized_old = NULL;
-	bool is_success = account_manager_call_account_query_account_by_account_id_sync(acc_mgr, account_db_path, account_db_id, e_cookie, &account_serialized_old, NULL, &error);
+	bool is_success = account_manager_call_account_query_account_by_account_id_sync(acc_mgr, account_db_path, account_db_id, &account_serialized_old, NULL, &error);
+//	bool is_success = account_manager_call_account_query_account_by_account_id_sync(acc_mgr, account_db_path, account_db_id, e_cookie, &account_serialized_old, NULL, &error);
 	if (!is_success)
 	{
 		_ERR("account_manager_call_account_query_account_by_account_id_sync failed [%d]", error->code);
@@ -363,7 +365,8 @@ ACCOUNT_API int account_delete_from_db_by_id(int account_db_id)
 	}
 
 	_INFO("3. Before account_manager_call_account_delete_from_db_by_id_sync");
-	is_success = account_manager_call_account_delete_from_db_by_id_sync(acc_mgr, account_db_path, account_db_id, e_cookie, NULL, &error);
+	is_success = account_manager_call_account_delete_from_db_by_id_sync(acc_mgr, account_db_path, account_db_id, NULL, &error);
+//	is_success = account_manager_call_account_delete_from_db_by_id_sync(acc_mgr, account_db_path, account_db_id, e_cookie, NULL, &error);
 	if (!is_success)
 	{
 		_ERR("account_manager_call_account_delete_from_db_by_id_sync failed [%d]", error->code);
@@ -382,7 +385,7 @@ ACCOUNT_API int account_delete_from_db_by_user_name(char *user_name, char *packa
 	ACCOUNT_RETURN_VAL((user_name != NULL), {}, ACCOUNT_ERROR_INVALID_PARAMETER, ("user_name is null!"));
 	ACCOUNT_RETURN_VAL((package_name != NULL), {}, ACCOUNT_ERROR_INVALID_PARAMETER, ("package_name is null!"));
 
-	_GET_COOKIE
+//	_GET_COOKIE
 
 	GError *error = NULL;
 
@@ -394,7 +397,8 @@ ACCOUNT_API int account_delete_from_db_by_user_name(char *user_name, char *packa
 	}
 
 	GVariant* account_list_variant = NULL;
-	bool is_success = account_manager_call_account_query_account_by_user_name_sync(acc_mgr, account_db_path, user_name, e_cookie, &account_list_variant, NULL, &error);
+	bool is_success = account_manager_call_account_query_account_by_user_name_sync(acc_mgr, account_db_path, user_name, &account_list_variant, NULL, &error);
+//	bool is_success = account_manager_call_account_query_account_by_user_name_sync(acc_mgr, account_db_path, user_name, e_cookie, &account_list_variant, NULL, &error);
 
 	int error_code = _account_get_error_code(is_success, error);
 	if (error_code != ACCOUNT_ERROR_NONE)
@@ -413,7 +417,8 @@ ACCOUNT_API int account_delete_from_db_by_user_name(char *user_name, char *packa
 
 	//TODO free account_list, account_list_variant
 
-	is_success = account_manager_call_account_delete_from_db_by_user_name_sync(acc_mgr, account_db_path, user_name, package_name, e_cookie, NULL, &error);
+	is_success = account_manager_call_account_delete_from_db_by_user_name_sync(acc_mgr, account_db_path, user_name, package_name, NULL, &error);
+//	is_success = account_manager_call_account_delete_from_db_by_user_name_sync(acc_mgr, account_db_path, user_name, package_name, e_cookie, NULL, &error);
 
 	if (!is_success)
 	{
@@ -431,7 +436,7 @@ int _account_delete_from_db_by_package_name(const char *package_name, bool permi
 
 	ACCOUNT_RETURN_VAL((package_name != NULL), {}, ACCOUNT_ERROR_INVALID_PARAMETER, ("package_name is null!"));
 
-	_GET_COOKIE
+//	_GET_COOKIE
 
 	GError *error = NULL;
 
@@ -444,7 +449,8 @@ int _account_delete_from_db_by_package_name(const char *package_name, bool permi
 
 	//First get account list of user_name, used for gSSO DB deletion
 	GVariant* account_list_variant = NULL;
-	bool is_success = account_manager_call_account_query_account_by_package_name_sync(acc_mgr, account_db_path, package_name, e_cookie, &account_list_variant, NULL, &error);
+	bool is_success = account_manager_call_account_query_account_by_package_name_sync(acc_mgr, account_db_path, package_name, &account_list_variant, NULL, &error);
+//	bool is_success = account_manager_call_account_query_account_by_package_name_sync(acc_mgr, account_db_path, package_name, e_cookie, &account_list_variant, NULL, &error);
 
 	int error_code = _account_get_error_code(is_success, error);
 	if (error_code != ACCOUNT_ERROR_NONE)
@@ -460,7 +466,8 @@ int _account_delete_from_db_by_package_name(const char *package_name, bool permi
 		return ACCOUNT_ERROR_NO_DATA;
 	}
 
-	is_success = account_manager_call_account_delete_from_db_by_package_name_sync(acc_mgr, account_db_path, package_name, permission, e_cookie, NULL, &error);
+	is_success = account_manager_call_account_delete_from_db_by_package_name_sync(acc_mgr, account_db_path, package_name, permission, NULL, &error);
+//	is_success = account_manager_call_account_delete_from_db_by_package_name_sync(acc_mgr, account_db_path, package_name, permission, e_cookie, NULL, &error);
 
 	if (!is_success)
 	{
@@ -492,7 +499,7 @@ ACCOUNT_API int account_update_to_db_by_id(account_h account, int account_id)
 	ACCOUNT_RETURN_VAL((account != NULL), {}, ACCOUNT_ERROR_INVALID_PARAMETER, ("DATA IS NULL"));
 	ACCOUNT_RETURN_VAL((account_id > 0), {}, ACCOUNT_ERROR_INVALID_PARAMETER, ("Account id is not valid"));
 
-	_GET_COOKIE
+//	_GET_COOKIE
 
 	GError *error = NULL;
 
@@ -505,7 +512,8 @@ ACCOUNT_API int account_update_to_db_by_id(account_h account, int account_id)
 
 	_INFO("2. Before account_manager_call_account_query_account_by_account_id_sync");
 	GVariant *account_serialized_old = NULL;
-	bool is_success = account_manager_call_account_query_account_by_account_id_sync(acc_mgr, account_db_path, account_id, e_cookie, &account_serialized_old, NULL, &error);
+	bool is_success = account_manager_call_account_query_account_by_account_id_sync(acc_mgr, account_db_path, account_id, &account_serialized_old, NULL, &error);
+//	bool is_success = account_manager_call_account_query_account_by_account_id_sync(acc_mgr, account_db_path, account_id, e_cookie, &account_serialized_old, NULL, &error);
 	if (!is_success)
 	{
 		_ERR("account_manager_call_account_query_account_by_account_id_sync failed [%d]", error->code);
@@ -514,7 +522,8 @@ ACCOUNT_API int account_update_to_db_by_id(account_h account, int account_id)
 
 	_INFO("3. Before account_manager_call_account_update_to_db_by_id_sync");
 	GVariant* account_serialized = marshal_account((account_s*) account);
-	is_success = account_manager_call_account_update_to_db_by_id_sync(acc_mgr, account_db_path, account_serialized, account_id, e_cookie, NULL, &error);
+	is_success = account_manager_call_account_update_to_db_by_id_sync(acc_mgr, account_db_path, account_serialized, account_id, NULL, &error);
+//	is_success = account_manager_call_account_update_to_db_by_id_sync(acc_mgr, account_db_path, account_serialized, account_id, e_cookie, NULL, &error);
 
 	if (!is_success)
 	{
@@ -545,7 +554,7 @@ ACCOUNT_API int account_update_to_db_by_id_without_permission(account_h account,
 	ACCOUNT_RETURN_VAL((account != NULL), {}, ACCOUNT_ERROR_INVALID_PARAMETER, ("DATA IS NULL"));
 	ACCOUNT_RETURN_VAL((account_id > 0), {}, ACCOUNT_ERROR_INVALID_PARAMETER, ("Account id is not valid"));
 
-	_GET_COOKIE
+//	_GET_COOKIE
 
 	GError *error = NULL;
 
@@ -558,7 +567,8 @@ ACCOUNT_API int account_update_to_db_by_id_without_permission(account_h account,
 
 	GVariant *account_serialized_old = NULL;
 	_INFO("before query() account_id[%d]", account_id);
-	bool is_success = account_manager_call_account_query_account_by_account_id_sync(acc_mgr, account_db_path, account_id, e_cookie, &account_serialized_old, NULL, &error);
+	bool is_success = account_manager_call_account_query_account_by_account_id_sync(acc_mgr, account_db_path, account_id, &account_serialized_old, NULL, &error);
+//	bool is_success = account_manager_call_account_query_account_by_account_id_sync(acc_mgr, account_db_path, account_id, e_cookie, &account_serialized_old, NULL, &error);
 	if (!is_success)
 	{
 		_ERR("account_manager_call_account_query_account_by_account_id_sync failed [%d]", error->code);
@@ -575,7 +585,8 @@ ACCOUNT_API int account_update_to_db_by_id_without_permission(account_h account,
 	}
 
 	_INFO("before call update() : account_id[%d]", account_id);
-	is_success = account_manager_call_account_update_to_db_by_id_ex_sync(acc_mgr, account_db_path, account_serialized, account_id, e_cookie, NULL, &error);
+	is_success = account_manager_call_account_update_to_db_by_id_ex_sync(acc_mgr, account_db_path, account_serialized, account_id, NULL, &error);
+//	is_success = account_manager_call_account_update_to_db_by_id_ex_sync(acc_mgr, account_db_path, account_serialized, account_id, e_cookie, NULL, &error);
 	_INFO("after call update() : is_success=%d", is_success);
 	if (!is_success)
 	{
@@ -596,7 +607,7 @@ ACCOUNT_API int account_update_to_db_by_user_name(account_h account, const char 
 	ACCOUNT_RETURN_VAL((user_name != NULL), {}, ACCOUNT_ERROR_INVALID_PARAMETER, ("USER NAME IS NULL"));
 	ACCOUNT_RETURN_VAL((package_name != NULL), {}, ACCOUNT_ERROR_INVALID_PARAMETER, ("PACKAGE NAME IS NULL"));
 
-	_GET_COOKIE
+//	_GET_COOKIE
 
 	GError *error = NULL;
 
@@ -609,7 +620,8 @@ ACCOUNT_API int account_update_to_db_by_user_name(account_h account, const char 
 
 	GVariant *account_serialized_old = NULL;
 	account_s *account_data = (account_s*) account;
-	bool is_success = account_manager_call_account_query_account_by_account_id_sync(acc_mgr, account_db_path, account_data->id,	e_cookie, &account_serialized_old, NULL, &error);
+	bool is_success = account_manager_call_account_query_account_by_account_id_sync(acc_mgr, account_db_path, account_data->id, &account_serialized_old, NULL, &error);
+//	bool is_success = account_manager_call_account_query_account_by_account_id_sync(acc_mgr, account_db_path, account_data->id,	e_cookie, &account_serialized_old, NULL, &error);
 	if (!is_success)
 	{
 		_ERR("account_manager_call_account_query_account_by_account_id_sync failed [%d]", error->code);
@@ -617,7 +629,8 @@ ACCOUNT_API int account_update_to_db_by_user_name(account_h account, const char 
 	}
 
 	GVariant* account_serialized = marshal_account(account_data);
-	is_success = account_manager_call_account_update_to_db_by_user_name_sync(acc_mgr, account_db_path, account_serialized, user_name, package_name, e_cookie, NULL, &error);
+	is_success = account_manager_call_account_update_to_db_by_user_name_sync(acc_mgr, account_db_path, account_serialized, user_name, package_name, NULL, &error);
+//	is_success = account_manager_call_account_update_to_db_by_user_name_sync(acc_mgr, account_db_path, account_serialized, user_name, package_name, e_cookie, NULL, &error);
 	if (!is_success)
 	{
 		_ERR("account_manager_call_account_update_to_db_by_user_name_sync failed [%d]", error->code);
@@ -1370,7 +1383,7 @@ ACCOUNT_API int account_foreach_account_from_db(account_cb callback, void *user_
 
 	ACCOUNT_RETURN_VAL((callback != NULL), {}, ACCOUNT_ERROR_INVALID_PARAMETER, ("ACCOUNT Callback IS NULL"));
 
-	_GET_COOKIE
+//	_GET_COOKIE
 
 	GError *error = NULL;
 
@@ -1382,7 +1395,8 @@ ACCOUNT_API int account_foreach_account_from_db(account_cb callback, void *user_
 	}
 
 	GVariant* account_list_variant = NULL;
-	bool is_success = account_manager_call_account_query_all_sync(acc_mgr, account_db_path, e_cookie, &account_list_variant, NULL, &error);
+	bool is_success = account_manager_call_account_query_all_sync(acc_mgr, account_db_path, &account_list_variant, NULL, &error);
+//	bool is_success = account_manager_call_account_query_all_sync(acc_mgr, account_db_path, e_cookie, &account_list_variant, NULL, &error);
 
 	int error_code = _account_get_error_code(is_success, error);
 	if (error_code != ACCOUNT_ERROR_NONE)
@@ -1423,7 +1437,7 @@ ACCOUNT_API int account_query_account_by_account_id(int account_db_id, account_h
 	ACCOUNT_RETURN_VAL((account_db_id > 0), {}, ACCOUNT_ERROR_INVALID_PARAMETER, ("ACCOUNT INDEX IS LESS THAN 0"));
 	ACCOUNT_RETURN_VAL((*account != NULL), {}, ACCOUNT_ERROR_INVALID_PARAMETER, ("ACCOUNT IS NULL"));
 
-	_GET_COOKIE
+//	_GET_COOKIE
 
 	GError *error = NULL;
 
@@ -1435,7 +1449,8 @@ ACCOUNT_API int account_query_account_by_account_id(int account_db_id, account_h
 	}
 
 	GVariant* account_variant = NULL;
-	bool is_success = account_manager_call_account_query_account_by_account_id_sync(acc_mgr, account_db_path, account_db_id, e_cookie, &account_variant, NULL, &error);
+	bool is_success = account_manager_call_account_query_account_by_account_id_sync(acc_mgr, account_db_path, account_db_id, &account_variant, NULL, &error);
+//	bool is_success = account_manager_call_account_query_account_by_account_id_sync(acc_mgr, account_db_path, account_db_id, e_cookie, &account_variant, NULL, &error);
 
 	int error_code = _account_get_error_code(is_success, error);
 	if (error_code != ACCOUNT_ERROR_NONE)
@@ -1468,7 +1483,7 @@ ACCOUNT_API int account_query_account_by_user_name(account_cb callback, const ch
 	ACCOUNT_RETURN_VAL((user_name != NULL), {}, ACCOUNT_ERROR_INVALID_PARAMETER, ("USER NAME IS NULL"));
 	ACCOUNT_RETURN_VAL((callback != NULL), {}, ACCOUNT_ERROR_INVALID_PARAMETER, ("CALL BACK IS NULL"));
 
-	_GET_COOKIE
+//	_GET_COOKIE
 
 	GError *error = NULL;
 
@@ -1480,7 +1495,8 @@ ACCOUNT_API int account_query_account_by_user_name(account_cb callback, const ch
 	}
 
 	GVariant* account_list_variant = NULL;
-	bool is_success = account_manager_call_account_query_account_by_user_name_sync(acc_mgr, account_db_path, user_name, e_cookie, &account_list_variant, NULL, &error);
+	bool is_success = account_manager_call_account_query_account_by_user_name_sync(acc_mgr, account_db_path, user_name, &account_list_variant, NULL, &error);
+//	bool is_success = account_manager_call_account_query_account_by_user_name_sync(acc_mgr, account_db_path, user_name, e_cookie, &account_list_variant, NULL, &error);
 
 	int error_code = _account_get_error_code(is_success, error);
 	if (error_code != ACCOUNT_ERROR_NONE)
@@ -1522,7 +1538,7 @@ ACCOUNT_API int account_query_account_by_package_name(account_cb callback, const
 	ACCOUNT_RETURN_VAL((package_name != NULL), {}, ACCOUNT_ERROR_INVALID_PARAMETER, ("PACKAGE NAME IS NULL"));
 	ACCOUNT_RETURN_VAL((callback != NULL), {}, ACCOUNT_ERROR_INVALID_PARAMETER, ("CALL BACK IS NULL"));
 
-	_GET_COOKIE
+//	_GET_COOKIE
 
 	GError *error = NULL;
 
@@ -1534,7 +1550,8 @@ ACCOUNT_API int account_query_account_by_package_name(account_cb callback, const
 	}
 
 	GVariant* account_list_variant = NULL;
-	bool is_success = account_manager_call_account_query_account_by_package_name_sync(acc_mgr, account_db_path, package_name, e_cookie, &account_list_variant, NULL, &error);
+	bool is_success = account_manager_call_account_query_account_by_package_name_sync(acc_mgr, account_db_path, package_name, &account_list_variant, NULL, &error);
+//	bool is_success = account_manager_call_account_query_account_by_package_name_sync(acc_mgr, account_db_path, package_name, e_cookie, &account_list_variant, NULL, &error);
 	int error_code = _account_get_error_code(is_success, error);
 	if (error_code != ACCOUNT_ERROR_NONE)
 	{
@@ -1581,7 +1598,7 @@ ACCOUNT_API int account_query_account_by_capability(account_cb callback, const c
 
 	ACCOUNT_RETURN_VAL((callback != NULL), {}, ACCOUNT_ERROR_INVALID_PARAMETER, ("CALL BACK IS NULL"));
 
-	_GET_COOKIE
+//	_GET_COOKIE
 
 	GError *error = NULL;
 
@@ -1593,7 +1610,8 @@ ACCOUNT_API int account_query_account_by_capability(account_cb callback, const c
 	}
 
 	GVariant* account_list_variant = NULL;
-	bool is_success = account_manager_call_account_query_account_by_capability_sync(acc_mgr, account_db_path, capability_type, capability_value, e_cookie, &account_list_variant, NULL, &error);
+	bool is_success = account_manager_call_account_query_account_by_capability_sync(acc_mgr, account_db_path, capability_type, capability_value, &account_list_variant, NULL, &error);
+//	bool is_success = account_manager_call_account_query_account_by_capability_sync(acc_mgr, account_db_path, capability_type, capability_value, e_cookie, &account_list_variant, NULL, &error);
 
 	int error_code = _account_get_error_code(is_success, error);
 	if (error_code != ACCOUNT_ERROR_NONE)
@@ -1635,7 +1653,7 @@ ACCOUNT_API int account_query_account_by_capability_type(account_cb callback, co
 	ACCOUNT_RETURN_VAL((capability_type != NULL), {}, ACCOUNT_ERROR_INVALID_PARAMETER, ("capability_type IS NULL"));
 	ACCOUNT_RETURN_VAL((callback != NULL), {}, ACCOUNT_ERROR_INVALID_PARAMETER, ("CALL BACK IS NULL"));
 
-	_GET_COOKIE
+//	_GET_COOKIE
 
 	GError *error = NULL;
 
@@ -1647,7 +1665,8 @@ ACCOUNT_API int account_query_account_by_capability_type(account_cb callback, co
 	}
 
 	GVariant* account_list_variant = NULL;
-	bool is_success = account_manager_call_account_query_account_by_capability_type_sync(acc_mgr, account_db_path, capability_type, e_cookie, &account_list_variant, NULL, &error);
+//	bool is_success = account_manager_call_account_query_account_by_capability_type_sync(acc_mgr, account_db_path, capability_type, e_cookie, &account_list_variant, NULL, &error);
+	bool is_success = account_manager_call_account_query_account_by_capability_type_sync(acc_mgr, account_db_path, capability_type, &account_list_variant, NULL, &error);
 
 	int error_code = _account_get_error_code(is_success, error);
 	if (error_code != ACCOUNT_ERROR_NONE)
@@ -1689,7 +1708,7 @@ ACCOUNT_API int account_query_capability_by_account_id(capability_cb callback, i
 	ACCOUNT_RETURN_VAL((account_id > 0), {}, ACCOUNT_ERROR_INVALID_PARAMETER, ("ACCOUNT INDEX IS LESS THAN 0"));
 	ACCOUNT_RETURN_VAL((callback != NULL), {}, ACCOUNT_ERROR_INVALID_PARAMETER, ("NO CALLBACK FUNCTION"));
 
-	_GET_COOKIE
+//	_GET_COOKIE
 
 	GError *error = NULL;
 	AccountManager* acc_mgr = _account_manager_get_instance();
@@ -1700,7 +1719,8 @@ ACCOUNT_API int account_query_capability_by_account_id(capability_cb callback, i
 	}
 
 	GVariant* capability_list_variant = NULL;
-	bool is_success = account_manager_call_account_query_capability_by_account_id_sync(acc_mgr, account_db_path, account_id, e_cookie, &capability_list_variant, NULL, &error);
+	bool is_success = account_manager_call_account_query_capability_by_account_id_sync(acc_mgr, account_db_path, account_id, &capability_list_variant, NULL, &error);
+//	bool is_success = account_manager_call_account_query_capability_by_account_id_sync(acc_mgr, account_db_path, account_id, e_cookie, &capability_list_variant, NULL, &error);
 	int error_code = _account_get_error_code(is_success, error);
 	if (error_code != ACCOUNT_ERROR_NONE)
 	{
@@ -1753,7 +1773,7 @@ static int _account_get_total_count(int *count, bool include_hidden)
 		return -1;
 	}
 
-	_GET_COOKIE
+//	_GET_COOKIE
 
 	AccountManager* acc_mgr = _account_manager_get_instance();
 	if (acc_mgr == NULL)
@@ -1763,7 +1783,8 @@ static int _account_get_total_count(int *count, bool include_hidden)
 	}
 
 	int temp_count = -1;
-	bool is_success = account_manager_call_account_get_total_count_from_db_sync(acc_mgr, account_db_path, include_hidden, e_cookie, &temp_count, NULL, &error);
+//	bool is_success = account_manager_call_account_get_total_count_from_db_sync(acc_mgr, account_db_path, include_hidden, e_cookie, &temp_count, NULL, &error);
+	bool is_success = account_manager_call_account_get_total_count_from_db_sync(acc_mgr, account_db_path, include_hidden, &temp_count, NULL, &error);
 	int error_code = _account_get_error_code(is_success, error);
 	if (error_code != ACCOUNT_ERROR_NONE)
 	{
@@ -1800,7 +1821,7 @@ ACCOUNT_API int account_update_sync_status_by_id(int account_db_id, const accoun
 		return ACCOUNT_ERROR_INVALID_PARAMETER;
 	}
 
-	_GET_COOKIE
+//	_GET_COOKIE
 
 	GError *error = NULL;
 
@@ -1811,7 +1832,8 @@ ACCOUNT_API int account_update_sync_status_by_id(int account_db_id, const accoun
 		return ACCOUNT_ERROR_PERMISSION_DENIED;
 	}
 
-	bool is_success = account_manager_call_account_update_sync_status_by_id_sync(acc_mgr, account_db_path, account_db_id, sync_status, e_cookie, NULL, &error);
+	bool is_success = account_manager_call_account_update_sync_status_by_id_sync(acc_mgr, account_db_path, account_db_id, sync_status, NULL, &error);
+//	bool is_success = account_manager_call_account_update_sync_status_by_id_sync(acc_mgr, account_db_path, account_db_id, sync_status, e_cookie, NULL, &error);
 	return _account_get_error_code(is_success, error);
 }
 
@@ -2119,7 +2141,7 @@ ACCOUNT_API int account_type_query_provider_feature_by_app_id(provider_feature_c
 	ACCOUNT_RETURN_VAL((app_id != NULL), {}, ACCOUNT_ERROR_INVALID_PARAMETER, ("APP ID IS NULL"));
 	ACCOUNT_RETURN_VAL((callback != NULL), {}, ACCOUNT_ERROR_INVALID_PARAMETER, ("NO CALLBACK FUNCTION"));
 
-	_GET_COOKIE
+//	_GET_COOKIE
 
 	GError *error = NULL;
 	gint error_code = ACCOUNT_ERROR_NONE;
@@ -2132,7 +2154,8 @@ ACCOUNT_API int account_type_query_provider_feature_by_app_id(provider_feature_c
 	}
 
 	GVariant* feature_list_variant = NULL;
-	bool is_success = account_manager_call_account_type_query_provider_feature_by_app_id_sync(acc_mgr, account_db_path, app_id, e_cookie, &feature_list_variant, NULL, &error);
+	bool is_success = account_manager_call_account_type_query_provider_feature_by_app_id_sync(acc_mgr, account_db_path, app_id, &feature_list_variant, NULL, &error);
+//	bool is_success = account_manager_call_account_type_query_provider_feature_by_app_id_sync(acc_mgr, account_db_path, app_id, e_cookie, &feature_list_variant, NULL, &error);
 	_INFO("account_manager_call_account_type_query_provider_feature_by_app_id_sync end=[%d]", is_success);
 
 	if (!is_success)
@@ -2177,7 +2200,7 @@ ACCOUNT_API bool account_type_query_supported_feature(const char* app_id, const 
 		return false;
 	}
 
-	_GET_COOKIE
+//	_GET_COOKIE
 
 	int is_supported = 0;
 	GError *error = NULL;
@@ -2191,7 +2214,8 @@ ACCOUNT_API bool account_type_query_supported_feature(const char* app_id, const 
 		return false;
 	}
 
-	bool is_success = account_manager_call_account_type_query_supported_feature_sync(acc_mgr, account_db_path, app_id, capability, e_cookie, &is_supported, NULL, &error);
+	bool is_success = account_manager_call_account_type_query_supported_feature_sync(acc_mgr, account_db_path, app_id, capability, &is_supported, NULL, &error);
+//	bool is_success = account_manager_call_account_type_query_supported_feature_sync(acc_mgr, account_db_path, app_id, capability, e_cookie, &is_supported, NULL, &error);
 	_INFO("account_manager_call_account_type_query_supported_feature_sync end=[%d]", is_success);
 
 	if (!is_success)
@@ -2395,7 +2419,7 @@ ACCOUNT_API int account_type_insert_to_db_internal(account_type_h account_type, 
 	ACCOUNT_RETURN_VAL((account_type != NULL), {}, ACCOUNT_ERROR_INVALID_PARAMETER, ("ACCOUNT TYPE HANDLE IS NULL"));
 	ACCOUNT_RETURN_VAL((account_type_id != NULL), {}, ACCOUNT_ERROR_INVALID_PARAMETER, ("ACCOUNT TYPE ID POINTER IS NULL"));
 
-	_GET_COOKIE
+//	_GET_COOKIE
 
 	GError *error = NULL;
 
@@ -2408,7 +2432,8 @@ ACCOUNT_API int account_type_insert_to_db_internal(account_type_h account_type, 
 
 	int db_id = -1;
 	GVariant* account_type_serialized = marshal_account_type((account_type_s*) account_type);
-	bool is_success = account_manager_call_account_type_add_sync(acc_mgr, account_db_path, account_type_serialized, e_cookie, &db_id, NULL, &error);
+	bool is_success = account_manager_call_account_type_add_sync(acc_mgr, account_db_path, account_type_serialized, &db_id, NULL, &error);
+//	bool is_success = account_manager_call_account_type_add_sync(acc_mgr, account_db_path, account_type_serialized, e_cookie, &db_id, NULL, &error);
 	int ret = _account_get_error_code(is_success, error);
 	if (ret != ACCOUNT_ERROR_NONE)
 	{
@@ -2438,7 +2463,7 @@ ACCOUNT_API int account_type_update_to_db_by_app_id_internal(const account_type_
 	ACCOUNT_RETURN_VAL((account_type != NULL), {}, ACCOUNT_ERROR_INVALID_PARAMETER, ("DATA IS NULL"));
 	ACCOUNT_RETURN_VAL((app_id != NULL), {}, ACCOUNT_ERROR_INVALID_PARAMETER, ("APP ID IS NULL"));
 
-	_GET_COOKIE
+//	_GET_COOKIE
 
 	GError *error = NULL;
 
@@ -2456,7 +2481,8 @@ ACCOUNT_API int account_type_update_to_db_by_app_id_internal(const account_type_
 		return ACCOUNT_ERROR_INVALID_PARAMETER;
 	}
 
-	bool is_success = account_manager_call_account_type_update_to_db_by_app_id_sync(acc_mgr, account_db_path, account_type_variant, app_id, e_cookie, NULL, &error);
+	bool is_success = account_manager_call_account_type_update_to_db_by_app_id_sync(acc_mgr, account_db_path, account_type_variant, app_id, NULL, &error);
+//	bool is_success = account_manager_call_account_type_update_to_db_by_app_id_sync(acc_mgr, account_db_path, account_type_variant, app_id, e_cookie, NULL, &error);
 	return _account_get_error_code(is_success, error);
 }
 
@@ -2472,7 +2498,7 @@ ACCOUNT_API int account_type_delete_by_app_id_internal(const char* app_id)
 
 	ACCOUNT_RETURN_VAL((app_id != NULL), {}, ACCOUNT_ERROR_INVALID_PARAMETER, ("APP ID IS NULL"));
 
-	_GET_COOKIE
+//	_GET_COOKIE
 
 	GError *error = NULL;
 
@@ -2483,7 +2509,8 @@ ACCOUNT_API int account_type_delete_by_app_id_internal(const char* app_id)
 		return ACCOUNT_ERROR_PERMISSION_DENIED;
 	}
 
-	bool is_success = account_manager_call_account_type_delete_by_app_id_sync(acc_mgr, account_db_path, app_id, e_cookie, NULL, &error);
+	bool is_success = account_manager_call_account_type_delete_by_app_id_sync(acc_mgr, account_db_path, app_id, NULL, &error);
+//	bool is_success = account_manager_call_account_type_delete_by_app_id_sync(acc_mgr, account_db_path, app_id, e_cookie, NULL, &error);
 	return _account_get_error_code(is_success, error);
 }
 
@@ -2495,7 +2522,7 @@ ACCOUNT_API int account_type_query_label_by_app_id(account_label_cb callback, co
 	ACCOUNT_RETURN_VAL((callback != NULL), {}, ACCOUNT_ERROR_INVALID_PARAMETER, ("ACCOUNT Callback IS NULL"));
 	ACCOUNT_RETURN_VAL((app_id != NULL), {}, ACCOUNT_ERROR_INVALID_PARAMETER, ("APP ID IS NULL"));
 
-	_GET_COOKIE
+//	_GET_COOKIE
 
 	GError *error = NULL;
 
@@ -2507,7 +2534,8 @@ ACCOUNT_API int account_type_query_label_by_app_id(account_label_cb callback, co
 	}
 
 	GVariant* label_list_variant = NULL;
-	bool is_success = account_manager_call_account_type_query_label_by_app_id_sync(acc_mgr, account_db_path, app_id, e_cookie, &label_list_variant, NULL, &error);
+	bool is_success = account_manager_call_account_type_query_label_by_app_id_sync(acc_mgr, account_db_path, app_id, &label_list_variant, NULL, &error);
+//	bool is_success = account_manager_call_account_type_query_label_by_app_id_sync(acc_mgr, account_db_path, app_id, e_cookie, &label_list_variant, NULL, &error);
 	int ret = _account_get_error_code(is_success, error);
 	if (ret != ACCOUNT_ERROR_NONE)
 	{
@@ -2550,7 +2578,7 @@ ACCOUNT_API int account_type_query_by_app_id(const char* app_id, account_type_h 
 	ACCOUNT_RETURN_VAL((account_type != NULL), {}, ACCOUNT_ERROR_INVALID_PARAMETER, ("ACCOUNT TYPE'S POINTER IS NULL"));
 	ACCOUNT_RETURN_VAL((*account_type != NULL), {}, ACCOUNT_ERROR_INVALID_PARAMETER, ("ACCOUNT TYPE IS NULL"));
 
-	_GET_COOKIE
+//	_GET_COOKIE
 
 	GError *error = NULL;
 
@@ -2564,7 +2592,8 @@ ACCOUNT_API int account_type_query_by_app_id(const char* app_id, account_type_h 
 	GVariant* account_type_variant = NULL;
 	account_type_s *in_data = (account_type_s*) (*account_type);
 
-	bool is_success = account_manager_call_account_type_query_by_app_id_sync(acc_mgr, account_db_path, app_id, e_cookie, &account_type_variant, NULL, &error);
+	bool is_success = account_manager_call_account_type_query_by_app_id_sync(acc_mgr, account_db_path, app_id, &account_type_variant, NULL, &error);
+//	bool is_success = account_manager_call_account_type_query_by_app_id_sync(acc_mgr, account_db_path, app_id, e_cookie, &account_type_variant, NULL, &error);
 	int ret = _account_get_error_code(is_success, error);
 	if (ret != ACCOUNT_ERROR_NONE)
 	{
@@ -2597,7 +2626,7 @@ ACCOUNT_API int account_type_foreach_account_type_from_db(account_type_cb callba
 
 	ACCOUNT_RETURN_VAL((callback != NULL), {}, ACCOUNT_ERROR_INVALID_PARAMETER, ("ACCOUNT Callback IS NULL"));
 
-	_GET_COOKIE
+//	_GET_COOKIE
 
 	GError *error = NULL;
 
@@ -2610,7 +2639,8 @@ ACCOUNT_API int account_type_foreach_account_type_from_db(account_type_cb callba
 
 	GVariant* account_type_list_variant = NULL;
 	_INFO("before account_type_query_all_sync()");
-	bool is_success = account_manager_call_account_type_query_all_sync(acc_mgr, account_db_path, e_cookie, &account_type_list_variant, NULL, &error);
+	bool is_success = account_manager_call_account_type_query_all_sync(acc_mgr, account_db_path, &account_type_list_variant, NULL, &error);
+//	bool is_success = account_manager_call_account_type_query_all_sync(acc_mgr, account_db_path, e_cookie, &account_type_list_variant, NULL, &error);
 	_INFO("after account_type_query_all_sync()");
 	int ret = _account_get_error_code(is_success, error);
 	if (ret != ACCOUNT_ERROR_NONE)
@@ -2653,7 +2683,7 @@ ACCOUNT_API int account_type_query_label_by_locale(const char* app_id, const cha
 	ACCOUNT_RETURN_VAL((locale != NULL), {}, ACCOUNT_ERROR_INVALID_PARAMETER, ("NO LOCALE"));
 	ACCOUNT_RETURN_VAL((label != NULL), {}, ACCOUNT_ERROR_INVALID_PARAMETER, ("label char is null"));
 
-	_GET_COOKIE
+//	_GET_COOKIE
 
 	GError *error = NULL;
 
@@ -2666,7 +2696,8 @@ ACCOUNT_API int account_type_query_label_by_locale(const char* app_id, const cha
 
 	char* label_temp = NULL;
 	_INFO("before account_type_query_label_by_locale_sync()");
-	bool is_success = account_manager_call_account_type_query_label_by_locale_sync(acc_mgr, account_db_path, app_id, locale, e_cookie, &label_temp, NULL, &error);
+	bool is_success = account_manager_call_account_type_query_label_by_locale_sync(acc_mgr, account_db_path, app_id, locale, &label_temp, NULL, &error);
+//	bool is_success = account_manager_call_account_type_query_label_by_locale_sync(acc_mgr, account_db_path, app_id, locale, e_cookie, &label_temp, NULL, &error);
 	_INFO("after account_type_query_label_by_locale_sync() : is_success=%d", is_success);
 	int ret = _account_get_error_code(is_success, error);
 	if (ret != ACCOUNT_ERROR_NONE)
@@ -2693,7 +2724,7 @@ ACCOUNT_API int account_type_query_by_provider_feature(account_type_cb callback,
 	ACCOUNT_RETURN_VAL((key != NULL), {}, ACCOUNT_ERROR_INVALID_PARAMETER, ("capability_type IS NULL"));
 	ACCOUNT_RETURN_VAL((callback != NULL), {}, ACCOUNT_ERROR_INVALID_PARAMETER, ("CALL BACK IS NULL"));
 
-	_GET_COOKIE
+//	_GET_COOKIE
 
 	GError *error = NULL;
 
@@ -2705,7 +2736,8 @@ ACCOUNT_API int account_type_query_by_provider_feature(account_type_cb callback,
 	}
 
 	GVariant* account_type_list_variant = NULL;
-	bool is_success = account_manager_call_account_type_query_by_provider_feature_sync(acc_mgr, account_db_path, key, e_cookie, &account_type_list_variant, NULL, &error);
+	bool is_success = account_manager_call_account_type_query_by_provider_feature_sync(acc_mgr, account_db_path, key, &account_type_list_variant, NULL, &error);
+//	bool is_success = account_manager_call_account_type_query_by_provider_feature_sync(acc_mgr, account_db_path, key, e_cookie, &account_type_list_variant, NULL, &error);
 	int ret = _account_get_error_code(is_success, error);
 	if (ret != ACCOUNT_ERROR_NONE)
 	{
@@ -2746,7 +2778,7 @@ ACCOUNT_API int account_type_query_app_id_exist(const char* app_id)
 
 	ACCOUNT_RETURN_VAL((app_id != 0), {}, ACCOUNT_ERROR_INVALID_PARAMETER, ("APP ID IS NULL"));
 
-	_GET_COOKIE
+//	_GET_COOKIE
 
 	GError *error = NULL;
 
@@ -2757,7 +2789,8 @@ ACCOUNT_API int account_type_query_app_id_exist(const char* app_id)
 		return ACCOUNT_ERROR_PERMISSION_DENIED;
 	}
 
-	bool is_success = account_manager_call_account_type_query_app_id_exist_sync(acc_mgr, account_db_path, app_id, e_cookie, NULL, &error);
+	bool is_success = account_manager_call_account_type_query_app_id_exist_sync(acc_mgr, account_db_path, app_id, NULL, &error);
+//	bool is_success = account_manager_call_account_type_query_app_id_exist_sync(acc_mgr, account_db_path, app_id, e_cookie, NULL, &error);
 
 	return _account_get_error_code(is_success, error);
 }
