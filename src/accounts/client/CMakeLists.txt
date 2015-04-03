@@ -15,7 +15,16 @@ INCLUDE_DIRECTORIES(${CMAKE_SOURCE_DIR}/include)
 INCLUDE_DIRECTORIES(${CMAKE_SOURCE_DIR}/src/accounts/common)
 
 INCLUDE(FindPkgConfig)
-pkg_check_modules(clientpkgs REQUIRED dbus-1 dlog gobject-2.0 glib-2.0 gio-2.0 gio-unix-2.0 capi-base-common security-server vconf)
+pkg_check_modules(clientpkgs REQUIRED
+		dbus-1
+		dlog
+		gobject-2.0
+		glib-2.0
+		gio-2.0
+		gio-unix-2.0
+		capi-base-common
+		vconf
+)
 
 FOREACH(flag ${clientpkgs_CFLAGS})
 	SET(EXTRA_CFLAGS "${EXTRA_CFLAGS} ${flag}")

@@ -16,8 +16,6 @@ BuildRequires:  pkgconfig(vconf)
 BuildRequires:	pkgconfig(glib-2.0) >= 2.26
 BuildRequires:  pkgconfig(gio-2.0)
 BuildRequires:  pkgconfig(gio-unix-2.0)
-BuildRequires:  pkgconfig(security-server)
-#BuildRequires:  dbus-python
 BuildRequires:  python-xml
 
 %description
