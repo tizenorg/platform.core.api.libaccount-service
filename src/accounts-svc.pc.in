@@ -1,7 +1,7 @@
 # Package Information for pkg-config
 
 prefix=@PREFIX@
-exec_prefix=@EXEC_PREFIX@
+exec_prefix=@BINDIR@
 libdir=@LIBDIR@
 includedir=@INCLUDEDIR@
 
@@ -9,5 +9,5 @@ Name: accounts-svc
 Description: Account DB library
 Version: @VERSION@
 #Requires: capi-base-common
-Libs: -L${libdir} -laccounts-svc
-Cflags: -I${includedir}
+Libs: -L@LIBDIR@ -laccounts-svc
+Cflags: -I@INCLUDEDIR@

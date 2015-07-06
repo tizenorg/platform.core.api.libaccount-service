@@ -40,7 +40,7 @@ extern "C"
 
 /**
  *  @brief    Enumerations of error codes for ACCOUNT APIs.
- *  @since_tizen  2.3
+ *  @since_tizen @if MOBILE 2.3 @elseif WEARABLE 2.4 @endif
  */
 typedef enum
 {

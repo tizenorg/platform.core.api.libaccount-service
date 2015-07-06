@@ -22,11 +22,13 @@
 #ifndef __ACCOUNT_INTERNAL_H__
 #define __ACCOUNT_INTERNAL_H__
 
-//#include <account.h>
-
 #ifdef __cplusplus
 extern "C"
 {
+#endif
+
+#ifndef ACCOUNT_INTERNAL_API
+#define ACCOUNT_INTERNAL_API __attribute__ ((visibility("default")))
 #endif
 
 /**
@@ -119,7 +121,7 @@ int account_update_to_db_by_id_without_permission(account_h account, int account
  *
  * @see account_type_get_app_id()
  */
-int account_type_set_app_id_internal(account_type_h account_type, const char *app_id);
+int account_type_set_app_id(account_type_h account_type, const char *app_id);
 
 /**
  * @internal
@@ -141,7 +143,7 @@ int account_type_set_app_id_internal(account_type_h account_type, const char *ap
  *
  * @see account_type_get_service_provider_id()
  */
-int account_type_set_service_provider_id_internal(account_type_h account_type, const char *service_provider_id);
+int account_type_set_service_provider_id(account_type_h account_type, const char *service_provider_id);
 
 /**
  * @internal
@@ -163,7 +165,7 @@ int account_type_set_service_provider_id_internal(account_type_h account_type, c
  *
  * @see account_type_get_icon_path()
  */
-int account_type_set_icon_path_internal(account_type_h account_type, const char *icon_path);
+int account_type_set_icon_path(account_type_h account_type, const char *icon_path);
 
 /**
  * @internal
@@ -185,7 +187,7 @@ int account_type_set_icon_path_internal(account_type_h account_type, const char 
  *
  * @see account_type_get_small_icon_path()
  */
-int account_type_set_small_icon_path_internal(account_type_h account_type, const char *small_icon_path);
+int account_type_set_small_icon_path(account_type_h account_type, const char *small_icon_path);
 
 /**
  * @internal
@@ -208,7 +210,7 @@ int account_type_set_small_icon_path_internal(account_type_h account_type, const
  *
  * @see account_type_get_multiple_account_support()
  */
-int account_type_set_multiple_account_support_internal(account_type_h account_type, const bool multiple_account_support);
+int account_type_set_multiple_account_support(account_type_h account_type, const bool multiple_account_support);
 
 /**
  * @internal
@@ -230,7 +232,7 @@ int account_type_set_multiple_account_support_internal(account_type_h account_ty
  *
  * @see account_type_get_label()
  */
-int account_type_set_label_internal(account_type_h account_type, const char* label, const char* locale);
+int account_type_set_label(account_type_h account_type, const char* label, const char* locale);
 
 /**
  * @internal
@@ -247,7 +249,7 @@ int account_type_set_label_internal(account_type_h account_type, const char* lab
  *
  * @see account_set_capability()
  */
-int account_type_set_provider_feature_internal(account_type_h account_type, const char* provider_feature);
+int account_type_set_provider_feature(account_type_h account_type, const char* provider_feature);
 
 /**
  * @internal
@@ -276,7 +278,7 @@ int account_type_set_provider_feature_internal(account_type_h account_type, cons
  * @see account_connect()
  * @see account_disconnect()
  */
-int account_type_insert_to_db_internal(account_type_h account_type, int* account_type_id);
+int account_type_insert_to_db(account_type_h account_type, int* account_type_id);
 
 /**
  * @internal
@@ -304,7 +306,7 @@ int account_type_insert_to_db_internal(account_type_h account_type, int* account
  * @see account_connect()
  * @see account_disconnect()
  */
-int account_type_update_to_db_by_app_id_internal(const account_type_h account_type, const char* app_id);
+int account_type_update_to_db_by_app_id(const account_type_h account_type, const char* app_id);
 
 /**
  * @internal
@@ -331,7 +333,49 @@ int account_type_update_to_db_by_app_id_internal(const account_type_h account_ty
  * @see account_connect()
  * @see account_disconnect()
  */
-int account_type_delete_by_app_id_internal(const char* app_id);
+int account_type_delete_by_app_id(const char* app_id);
+
+/**
+ * @internal
+ * @brief       Start to subscribe account event through the given callback function
+ *
+ * @param[in]   account_subscribe       The account subscription handle
+ * @param[in]   cb_func When an account is removed from account database. It will be called with event message and account id.
+ * @param[in]   user_data user_data will be delivered to cb_func
+ *
+ * @return      0 on success, otherwise a negative error value.
+ * @retval      #ACCOUNT_ERROR_NONE Successful
+ * @retval      #ACCOUNT_ERROR_EVENT_SUBSCRIPTION_FAIL Subscription fail
+ * @retval      #ACCOUNT_ERROR_INVALID_PARAMETER Invalid parameter
+ *
+ * @see account_unsubscribe_notification()
+ * @see account_subscribe_notification()
+ */
+ACCOUNT_API int account_subscribe_notification_ex(account_subscribe_h account_subscribe, account_event_cb cb_func, void* user_data);
+
+/**
+ * @internal
+ * @brief       Start to subscribe account event through the given callback function
+ *
+ * @param[in]   account_subscribe       The account subscription handle
+ * @param[in]   cb_func When an account is removed from account database. It will be called with event message and account id.
+ * @param[in]   user_data user_data will be delivered to cb_func
+ *
+ * @return      0 on success, otherwise a negative error value.
+ * @retval      #ACCOUNT_ERROR_NONE Successful
+ * @retval      #ACCOUNT_ERROR_EVENT_SUBSCRIPTION_FAIL Subscription fail
+ * @retval      #ACCOUNT_ERROR_INVALID_PARAMETER Invalid parameter
+ *
+ * @see account_unsubscribe_notification()
+ * @see account_subscribe_notification()
+ */
+ACCOUNT_API int account_unsubscribe_notification_ex(account_subscribe_h account_subscribe);
+
+
+/*offline apis*/
+int account_type_insert_to_db_offline(account_type_h account_type, int* account_type_id);
+
+int account_type_delete_by_app_id_offline(const char* app_id);
 
 /**
 * @}

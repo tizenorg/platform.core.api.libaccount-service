@@ -36,40 +36,6 @@ extern "C"
  */
 
 /**
- * @brief       Start to subscribe account event through the given callback function
- *
- * @param[in]   account_subscribe       The account subscription handle
- * @param[in]   cb_func When an account is removed from account database. It will be called with event message and account id.
- * @param[in]   user_data user_data will be delivered to cb_func
- *
- * @return      0 on success, otherwise a negative error value.
- * @retval      #ACCOUNT_ERROR_NONE Successful
- * @retval      #ACCOUNT_ERROR_EVENT_SUBSCRIPTION_FAIL Subscription fail
- * @retval      #ACCOUNT_ERROR_INVALID_PARAMETER Invalid parameter
- *
- * @see account_unsubscribe_notification()
- * @see account_subscribe_notification()
- */
-ACCOUNT_API int account_subscribe_notification_ex(account_subscribe_h account_subscribe, account_event_cb cb_func, void* user_data);
-
-/**
- * @brief       Start to subscribe account event through the given callback function
- *
- * @param[in]   account_subscribe       The account subscription handle
- * @param[in]   cb_func When an account is removed from account database. It will be called with event message and account id.
- * @param[in]   user_data user_data will be delivered to cb_func
- *
- * @return      0 on success, otherwise a negative error value.
- * @retval      #ACCOUNT_ERROR_NONE Successful
- * @retval      #ACCOUNT_ERROR_EVENT_SUBSCRIPTION_FAIL Subscription fail
- * @retval      #ACCOUNT_ERROR_INVALID_PARAMETER Invalid parameter
- *
- * @see account_unsubscribe_notification()
- * @see account_subscribe_notification()
- */
-ACCOUNT_API int account_unsubscribe_notification_ex(account_subscribe_h account_subscribe);
-
-/**
  * @brief  Gets the count of accounts whose secrect state is visible in the account database.
  * @since_tizen 2.3
  *

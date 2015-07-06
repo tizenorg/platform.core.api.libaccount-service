@@ -16,7 +16,6 @@
  *
  */
 
-#include <gio/gio.h>
 #include <stdlib.h>
 #include <glib.h>
 #include <fcntl.h>
@@ -27,14 +26,16 @@
 #endif
 #include <vconf.h>
 
+#include <dbg.h>
+#include <account-private.h>
+#include <account_ipc_marshal.h>
+#include <account-mgr-stub.h>
+
 #include "account.h"
 #include "account-error.h"
-#include "account-private.h"
 #include "account-types.h"
-#include "account_ipc_marshal.h"
-
-#include "dbg.h"
-#include "account-mgr-stub.h"
+#include "account_internal.h"
+#include "account_private_client.h"
 
 #define ACCOUNT_DB_OPEN_READONLY 0
 #define ACCOUNT_DB_OPEN_READWRITE 1
@@ -84,7 +85,7 @@ static int _account_custom_gslist_free(GSList* list)
 
 	return ACCOUNT_ERROR_NONE;
 }
-
+/*
 static int _account_list_free(GList* list)
 {
 	if(!list){
@@ -96,6 +97,7 @@ static int _account_list_free(GList* list)
 
 	return ACCOUNT_ERROR_NONE;
 }
+*/
 
 static int _account_free_account_items(account_s *data)
 {
@@ -115,8 +117,8 @@ static int _account_free_account_items(account_s *data)
 	_account_gslist_free(data->capablity_list);
 	_account_glist_free(data->account_list);
 	_account_custom_gslist_free(data->custom_list);
-	_account_list_free(data->domain_list);
-	_account_list_free(data->mechanism_list);
+//	_account_list_free(data->domain_list);
+//	_account_list_free(data->mechanism_list);
 
 	return ACCOUNT_ERROR_NONE;
 }
@@ -280,7 +282,7 @@ ACCOUNT_API int account_disconnect(void)
 ACCOUNT_API int account_insert_to_db(account_h account, int *account_db_id)
 {
 	_INFO("1. account_insert_to_db start");
-	char* account_db_path = ACCOUNT_DB_NAME;
+	char* account_db_path = ACCOUNT_DB_PATH;
 
 	ACCOUNT_RETURN_VAL((account != NULL), {}, ACCOUNT_ERROR_INVALID_PARAMETER, ("ACCOUNT HANDLE IS NULL"));
 	ACCOUNT_RETURN_VAL((account_db_id != NULL), {}, ACCOUNT_ERROR_INVALID_PARAMETER, ("ACCOUNT ID POINTER IS NULL"));
@@ -317,7 +319,8 @@ CATCH:
 ACCOUNT_API int account_delete_from_db_by_id(int account_db_id)
 {
 	_INFO("1. account_delete_from_db_by_id starting [%d]", account_db_id);
-	char* account_db_path = ACCOUNT_DB_NAME;
+	char* account_db_path = ACCOUNT_DB_PATH;
+	int error_code = ACCOUNT_ERROR_NONE;
 
 	ACCOUNT_RETURN_VAL((account_db_id > 0), {}, ACCOUNT_ERROR_INVALID_PARAMETER, ("ACCOUNT ID IS LESS THAN ZERO."));
 
@@ -336,8 +339,9 @@ ACCOUNT_API int account_delete_from_db_by_id(int account_db_id)
 
 	if (!is_success)
 	{
-		_ERR("account_manager_call_account_query_account_by_account_id_sync failed [%d]", error->code);
-		return _account_get_error_code(is_success, error);
+		error_code = _account_get_error_code(is_success, error);
+		_ERR("account_manager_call_account_query_account_by_account_id_sync failed [%d]", error_code);
+		return error_code;
 	}
 
 	_INFO("3. Before account_manager_call_account_delete_from_db_by_id_sync");
@@ -345,8 +349,9 @@ ACCOUNT_API int account_delete_from_db_by_id(int account_db_id)
 
 	if (!is_success)
 	{
-		_ERR("account_manager_call_account_delete_from_db_by_id_sync failed [%d]", error->code);
-		return _account_get_error_code(is_success, error);
+		error_code = _account_get_error_code(is_success, error);
+		_ERR("account_manager_call_account_delete_from_db_by_id_sync failed [%d]", error_code);
+		return error_code;
 	}
 
 	_INFO("4. Before account_delete_from_db_by_id end");
@@ -355,8 +360,9 @@ ACCOUNT_API int account_delete_from_db_by_id(int account_db_id)
 
 ACCOUNT_API int account_delete_from_db_by_user_name(char *user_name, char *package_name)
 {
+	int error_code = ACCOUNT_ERROR_NONE;
+	char* account_db_path = ACCOUNT_DB_PATH;
 	_INFO("account_delete_from_db_by_user_name start");
-	char* account_db_path = ACCOUNT_DB_NAME;
 
 	ACCOUNT_RETURN_VAL((user_name != NULL), {}, ACCOUNT_ERROR_INVALID_PARAMETER, ("user_name is null!"));
 	ACCOUNT_RETURN_VAL((package_name != NULL), {}, ACCOUNT_ERROR_INVALID_PARAMETER, ("package_name is null!"));
@@ -374,7 +380,7 @@ ACCOUNT_API int account_delete_from_db_by_user_name(char *user_name, char *packa
 	GVariant* account_list_variant = NULL;
 	bool is_success = account_manager_call_account_query_account_by_user_name_sync(acc_mgr, account_db_path, user_name, &account_list_variant, NULL, &error);
 
-	int error_code = _account_get_error_code(is_success, error);
+	error_code = _account_get_error_code(is_success, error);
 	if (error_code != ACCOUNT_ERROR_NONE)
 	{
 		_ERR("account_query_account_by_user_name error=[%d]", error_code);
@@ -395,8 +401,9 @@ ACCOUNT_API int account_delete_from_db_by_user_name(char *user_name, char *packa
 
 	if (!is_success)
 	{
-		_ERR("account_manager_call_account_delete_from_db_by_user_name_sync failed [%d]", error->code);
-		return _account_get_error_code(is_success, error);
+		error_code = _account_get_error_code(is_success, error);
+		_ERR("account_manager_call_account_delete_from_db_by_user_name_sync failed [%d]", error_code);
+		return error_code;
 	}
 
 	return ACCOUNT_ERROR_NONE;
@@ -405,7 +412,8 @@ ACCOUNT_API int account_delete_from_db_by_user_name(char *user_name, char *packa
 int _account_delete_from_db_by_package_name(const char *package_name, bool permission)
 {
 	_INFO("_account_delete_from_db_by_package_name starting permission opions = %d", permission);
-	char* account_db_path = ACCOUNT_DB_NAME;
+	char* account_db_path = ACCOUNT_DB_PATH;
+	int error_code = ACCOUNT_ERROR_NONE;
 
 	ACCOUNT_RETURN_VAL((package_name != NULL), {}, ACCOUNT_ERROR_INVALID_PARAMETER, ("package_name is null!"));
 
@@ -422,7 +430,7 @@ int _account_delete_from_db_by_package_name(const char *package_name, bool permi
 	GVariant* account_list_variant = NULL;
 	bool is_success = account_manager_call_account_query_account_by_package_name_sync(acc_mgr, account_db_path, package_name, &account_list_variant, NULL, &error);
 
-	int error_code = _account_get_error_code(is_success, error);
+	error_code = _account_get_error_code(is_success, error);
 	if (error_code != ACCOUNT_ERROR_NONE)
 	{
 		return error_code;
@@ -440,8 +448,9 @@ int _account_delete_from_db_by_package_name(const char *package_name, bool permi
 
 	if (!is_success)
 	{
-		_ERR("account_manager_call_account_delete_from_db_by_package_name_sync failed [%d]", error->code);
-		return _account_get_error_code(is_success, error);
+		error_code = _account_get_error_code(is_success, error);
+		_ERR("account_manager_call_account_delete_from_db_by_package_name_sync failed [%d]", error_code);
+		return error_code;
 	}
 
 	return ACCOUNT_ERROR_NONE;
@@ -453,7 +462,7 @@ ACCOUNT_API int account_delete_from_db_by_package_name(const char *package_name)
 	return _account_delete_from_db_by_package_name(package_name, true);
 }
 
-ACCOUNT_API int account_delete_from_db_by_package_name_without_permission(const char *package_name)
+ACCOUNT_INTERNAL_API int account_delete_from_db_by_package_name_without_permission(const char *package_name)
 {
 	_INFO("account_delete_from_db_by_package_name starting without permission");
 	return _account_delete_from_db_by_package_name(package_name, false);
@@ -463,7 +472,8 @@ ACCOUNT_API int account_update_to_db_by_id(account_h account, int account_id)
 {
 	//First we will update account db
 	_INFO("1. account_update_to_db_by_id start");
-	char* account_db_path = ACCOUNT_DB_NAME;
+	char* account_db_path = ACCOUNT_DB_PATH;
+	int error_code = ACCOUNT_ERROR_NONE;
 
 	ACCOUNT_RETURN_VAL((account != NULL), {}, ACCOUNT_ERROR_INVALID_PARAMETER, ("DATA IS NULL"));
 	ACCOUNT_RETURN_VAL((account_id > 0), {}, ACCOUNT_ERROR_INVALID_PARAMETER, ("Account id is not valid"));
@@ -483,8 +493,9 @@ ACCOUNT_API int account_update_to_db_by_id(account_h account, int account_id)
 
 	if (!is_success)
 	{
-		_ERR("account_manager_call_account_query_account_by_account_id_sync failed [%d]", error->code);
-		return _account_get_error_code(is_success, error);
+		error_code = _account_get_error_code(is_success, error);
+		_ERR("account_manager_call_account_query_account_by_account_id_sync failed [%d]", error_code);
+		return error_code;
 	}
 
 	_INFO("3. Before account_manager_call_account_update_to_db_by_id_sync");
@@ -493,8 +504,9 @@ ACCOUNT_API int account_update_to_db_by_id(account_h account, int account_id)
 
 	if (!is_success)
 	{
-		_ERR("account_manager_call_account_update_to_db_by_id_sync failed [%d]", error->code);
-		return _account_get_error_code(is_success, error);
+		error_code = _account_get_error_code(is_success, error);
+		_ERR("account_manager_call_account_update_to_db_by_id_sync failed [%d]", error_code);
+		return error_code;
 	}
 
 	_INFO("4. account_update_to_db_by_id end");
@@ -509,13 +521,14 @@ ACCOUNT_API int account_update_to_db_by_id_ex(account_h account, int account_id)
 	return ret;
 }
 
-ACCOUNT_API int account_update_to_db_by_id_without_permission(account_h account, int account_id)
+ACCOUNT_INTERNAL_API int account_update_to_db_by_id_without_permission(account_h account, int account_id)
 {
 	//First we will update account db
 	//Then we will update gSSO DB, if it fails then we will rollback account db updates
 
 	_INFO("account_update_to_db_by_id_without_permission start");
-	char* account_db_path = ACCOUNT_DB_NAME;
+	char* account_db_path = ACCOUNT_DB_PATH;
+	int error_code = ACCOUNT_ERROR_NONE;
 
 	ACCOUNT_RETURN_VAL((account != NULL), {}, ACCOUNT_ERROR_INVALID_PARAMETER, ("DATA IS NULL"));
 	ACCOUNT_RETURN_VAL((account_id > 0), {}, ACCOUNT_ERROR_INVALID_PARAMETER, ("Account id is not valid"));
@@ -535,8 +548,9 @@ ACCOUNT_API int account_update_to_db_by_id_without_permission(account_h account,
 
 	if (!is_success)
 	{
-		_ERR("account_manager_call_account_query_account_by_account_id_sync failed [%d]", error->code);
-		return _account_get_error_code(is_success, error);
+		error_code = _account_get_error_code(is_success, error);
+		_ERR("account_manager_call_account_query_account_by_account_id_sync failed [%d]", error_code);
+		return error_code;
 	}
 
 	_INFO("before marshal() : account_id[%d], user_name=%s", account_id, ((account_s*)account)->user_name);
@@ -554,8 +568,9 @@ ACCOUNT_API int account_update_to_db_by_id_without_permission(account_h account,
 	_INFO("after call update() : is_success=%d", is_success);
 	if (!is_success)
 	{
-		_ERR("account_manager_call_account_update_to_db_by_id_ex_sync failed [%d]", error->code);
-		return _account_get_error_code(is_success, error);
+		error_code = _account_get_error_code(is_success, error);
+		_ERR("account_manager_call_account_update_to_db_by_id_ex_sync failed [%d]", error_code);
+		return error_code;
 	}
 
 	return ACCOUNT_ERROR_NONE;
@@ -565,7 +580,8 @@ ACCOUNT_API int account_update_to_db_by_user_name(account_h account, const char 
 {
 	//First we will update account db
 	_INFO("account_update_to_db_by_user_name starting");
-	char* account_db_path = ACCOUNT_DB_NAME;
+	char* account_db_path = ACCOUNT_DB_PATH;
+	int error_code = ACCOUNT_ERROR_NONE;
 
 	ACCOUNT_RETURN_VAL((account != NULL), {}, ACCOUNT_ERROR_INVALID_PARAMETER, ("DATA IS NULL"));
 	ACCOUNT_RETURN_VAL((user_name != NULL), {}, ACCOUNT_ERROR_INVALID_PARAMETER, ("USER NAME IS NULL"));
@@ -586,8 +602,9 @@ ACCOUNT_API int account_update_to_db_by_user_name(account_h account, const char 
 
 	if (!is_success)
 	{
-		_ERR("account_manager_call_account_query_account_by_account_id_sync failed [%d]", error->code);
-		return _account_get_error_code(is_success, error);
+		error_code = _account_get_error_code(is_success, error);
+		_ERR("account_manager_call_account_query_account_by_account_id_sync failed [%d]", error_code);
+		return error_code;
 	}
 
 	GVariant* account_serialized = marshal_account(account_data);
@@ -595,8 +612,9 @@ ACCOUNT_API int account_update_to_db_by_user_name(account_h account, const char 
 
 	if (!is_success)
 	{
-		_ERR("account_manager_call_account_update_to_db_by_user_name_sync failed [%d]", error->code);
-		return _account_get_error_code(is_success, error);
+		error_code = _account_get_error_code(is_success, error);
+		_ERR("account_manager_call_account_update_to_db_by_user_name_sync failed [%d]", error_code);
+		return error_code;
 	}
 
 	return ACCOUNT_ERROR_NONE;
@@ -604,6 +622,7 @@ ACCOUNT_API int account_update_to_db_by_user_name(account_h account, const char 
 
 ACCOUNT_API int account_create(account_h *account)
 {
+	_INFO("account_create start");
 	if (!account) {
 		ACCOUNT_SLOGE("(%s)-(%d) account is NULL.\n", __FUNCTION__, __LINE__);
 		return ACCOUNT_ERROR_INVALID_PARAMETER;
@@ -625,19 +644,21 @@ ACCOUNT_API int account_create(account_h *account)
 
 	data->auth_type = ACCOUNT_AUTH_TYPE_INVALID;
 
-	data->account_list = NULL;
+//	data->account_list = NULL;
 	data->capablity_list = NULL;
 	data->custom_list = NULL;
-	data->domain_list = NULL;
-	data->mechanism_list = NULL;
+//	data->domain_list = NULL;
+//	data->mechanism_list = NULL;
 
 	*account = (account_h)data;
 
+	_INFO("account_create end");
 	return ACCOUNT_ERROR_NONE;
 }
 
 ACCOUNT_API int account_destroy(account_h account)
 {
+	_INFO("account_destroy start");
 	account_s *data = (account_s*)account;
 
 	ACCOUNT_RETURN_VAL((data != NULL), {}, ACCOUNT_ERROR_INVALID_PARAMETER, ("Account handle is null!"));
@@ -645,6 +666,7 @@ ACCOUNT_API int account_destroy(account_h account)
 	_account_free_account_items(data);
 	_ACCOUNT_FREE(data);
 
+	_INFO("account_destroy end");
 	return ACCOUNT_ERROR_NONE;
 }
 
@@ -1340,8 +1362,8 @@ ACCOUNT_API int account_get_custom_all(account_h account, account_custom_cb call
 
 ACCOUNT_API int account_foreach_account_from_db(account_cb callback, void *user_data)
 {
-	_INFO("account_type_foreach_account_type_from_db start");
-	char* account_db_path = ACCOUNT_DB_NAME;
+	_INFO("account_foreach_account_from_db start");
+	char* account_db_path = ACCOUNT_DB_PATH;
 
 	ACCOUNT_RETURN_VAL((callback != NULL), {}, ACCOUNT_ERROR_INVALID_PARAMETER, ("ACCOUNT Callback IS NULL"));
 
@@ -1391,9 +1413,10 @@ ACCOUNT_API int account_foreach_account_from_db(account_cb callback, void *user_
 ACCOUNT_API int account_query_account_by_account_id(int account_db_id, account_h *account)
 {
 	_INFO("account_query_account_by_account_id start [%d]", account_db_id);
-	char* account_db_path = ACCOUNT_DB_NAME;
+	char* account_db_path = ACCOUNT_DB_PATH;
 
 	ACCOUNT_RETURN_VAL((account_db_id > 0), {}, ACCOUNT_ERROR_INVALID_PARAMETER, ("ACCOUNT INDEX IS LESS THAN 0"));
+	ACCOUNT_RETURN_VAL((account != NULL), {}, ACCOUNT_ERROR_INVALID_PARAMETER, ("ACCOUNT POINTER IS NULL"));
 	ACCOUNT_RETURN_VAL((*account != NULL), {}, ACCOUNT_ERROR_INVALID_PARAMETER, ("ACCOUNT IS NULL"));
 
 	GError *error = NULL;
@@ -1434,7 +1457,7 @@ ACCOUNT_API int account_query_account_by_account_id(int account_db_id, account_h
 ACCOUNT_API int account_query_account_by_user_name(account_cb callback, const char* user_name, void* user_data)
 {
 	_INFO("account_query_account_by_user_name starting");
-	char* account_db_path = ACCOUNT_DB_NAME;
+	char* account_db_path = ACCOUNT_DB_PATH;
 
 	ACCOUNT_RETURN_VAL((user_name != NULL), {}, ACCOUNT_ERROR_INVALID_PARAMETER, ("USER NAME IS NULL"));
 	ACCOUNT_RETURN_VAL((callback != NULL), {}, ACCOUNT_ERROR_INVALID_PARAMETER, ("CALL BACK IS NULL"));
@@ -1486,7 +1509,7 @@ ACCOUNT_API int account_query_account_by_user_name(account_cb callback, const ch
 ACCOUNT_API int account_query_account_by_package_name(account_cb callback, const char *package_name, void *user_data)
 {
 	_INFO("account_query_account_by_package_name starting");
-	char* account_db_path = ACCOUNT_DB_NAME;
+	char* account_db_path = ACCOUNT_DB_PATH;
 
 	ACCOUNT_RETURN_VAL((package_name != NULL), {}, ACCOUNT_ERROR_INVALID_PARAMETER, ("PACKAGE NAME IS NULL"));
 	ACCOUNT_RETURN_VAL((callback != NULL), {}, ACCOUNT_ERROR_INVALID_PARAMETER, ("CALL BACK IS NULL"));
@@ -1538,7 +1561,7 @@ ACCOUNT_API int account_query_account_by_package_name(account_cb callback, const
 ACCOUNT_API int account_query_account_by_capability(account_cb callback, const char* capability_type, account_capability_state_e capability_value, void *user_data)
 {
 	_INFO("account_query_account_by_capability starting");
-	char* account_db_path = ACCOUNT_DB_NAME;
+	char* account_db_path = ACCOUNT_DB_PATH;
 
 	ACCOUNT_RETURN_VAL((capability_type != NULL), {}, ACCOUNT_ERROR_INVALID_PARAMETER, ("capability_type IS NULL"));
 
@@ -1596,7 +1619,7 @@ ACCOUNT_API int account_query_account_by_capability(account_cb callback, const c
 ACCOUNT_API int account_query_account_by_capability_type(account_cb callback, const char* capability_type, void* user_data)
 {
 	_INFO("account_query_account_by_capability_type starting");
-	char* account_db_path = ACCOUNT_DB_NAME;
+	char* account_db_path = ACCOUNT_DB_PATH;
 
 	ACCOUNT_RETURN_VAL((capability_type != NULL), {}, ACCOUNT_ERROR_INVALID_PARAMETER, ("capability_type IS NULL"));
 	ACCOUNT_RETURN_VAL((callback != NULL), {}, ACCOUNT_ERROR_INVALID_PARAMETER, ("CALL BACK IS NULL"));
@@ -1648,7 +1671,7 @@ ACCOUNT_API int account_query_account_by_capability_type(account_cb callback, co
 ACCOUNT_API int account_query_capability_by_account_id(capability_cb callback, int account_id, void *user_data)
 {
 	_INFO("account_query_capability_by_account_id starting");
-	char* account_db_path = ACCOUNT_DB_NAME;
+	char* account_db_path = ACCOUNT_DB_PATH;
 
 	ACCOUNT_RETURN_VAL((account_id > 0), {}, ACCOUNT_ERROR_INVALID_PARAMETER, ("ACCOUNT INDEX IS LESS THAN 0"));
 	ACCOUNT_RETURN_VAL((callback != NULL), {}, ACCOUNT_ERROR_INVALID_PARAMETER, ("NO CALLBACK FUNCTION"));
@@ -1700,7 +1723,7 @@ ACCOUNT_API int account_query_capability_by_account_id(capability_cb callback, i
 static int _account_get_total_count(int *count, bool include_hidden)
 {
 	_INFO("account_get_total_count_from_db starting");
-	char* account_db_path = ACCOUNT_DB_NAME;
+	char* account_db_path = ACCOUNT_DB_PATH;
 
 	if (!count)
 	{
@@ -1753,7 +1776,7 @@ ACCOUNT_API int account_get_total_count_from_db_ex(int *count)
 ACCOUNT_API int account_update_sync_status_by_id(int account_db_id, const account_sync_state_e sync_status)
 {
 	_INFO("account_update_sync_status_by_id starting");
-	char* account_db_path = ACCOUNT_DB_NAME;
+	char* account_db_path = ACCOUNT_DB_PATH;
 
 	ACCOUNT_RETURN_VAL((account_db_id > 0), {}, ACCOUNT_ERROR_INVALID_PARAMETER, ("ACCOUNT INDEX IS LESS THAN 0"));
 	if ( ((int)sync_status < 0) || (sync_status > ACCOUNT_SYNC_STATUS_RUNNING)) {
@@ -1811,7 +1834,7 @@ static int _account_type_item_free(account_type_s *data)
 
 	return ACCOUNT_ERROR_NONE;
 }
-
+/*
 static int _account_type_glist_free(GList* list)
 {
 	ACCOUNT_RETURN_VAL((list != NULL), {}, ACCOUNT_ERROR_INVALID_PARAMETER, ("Glist is NULL"));
@@ -1829,13 +1852,14 @@ static int _account_type_glist_free(GList* list)
 
 	return ACCOUNT_ERROR_NONE;
 }
-
+*/
 static int _account_type_free_account_type_items(account_type_s *data)
 {
 	_account_type_item_free(data);
 
 	_account_type_gslist_free(data->label_list);
-	_account_type_glist_free(data->account_type_list);
+//	_account_type_gslist_free(data->provider_feature_list);
+//	_account_type_glist_free(data->account_type_list);
 
 	return ACCOUNT_ERROR_NONE;
 }
@@ -1864,7 +1888,7 @@ ACCOUNT_API int account_type_create(account_type_h *account_type)
 	data->small_icon_path = NULL;
 	data->multiple_account_support = false;
 	data->label_list = NULL;
-	data->account_type_list = NULL;
+//	data->account_type_list = NULL;
 	data->provider_feature_list = NULL;
 
 	*account_type = (account_type_h)data;
@@ -1890,12 +1914,7 @@ ACCOUNT_API int account_type_destroy(account_type_h account_type)
 	return ACCOUNT_ERROR_NONE;
 }
 
-ACCOUNT_API int account_type_set_app_id(account_type_h account_type, const char *app_id)
-{
-	return ACCOUNT_ERROR_NONE;
-}
-
-ACCOUNT_API int account_type_set_app_id_internal(account_type_h account_type, const char *app_id)
+ACCOUNT_INTERNAL_API int account_type_set_app_id(account_type_h account_type, const char *app_id)
 {
 	if (!account_type) {
 		ACCOUNT_SLOGE("(%s)-(%d) account_type handle is NULL.\n", __FUNCTION__, __LINE__);
@@ -1915,12 +1934,7 @@ ACCOUNT_API int account_type_set_app_id_internal(account_type_h account_type, co
 	return ACCOUNT_ERROR_NONE;
 }
 
-ACCOUNT_API int account_type_set_service_provider_id(account_type_h account_type, const char *service_provider_id)
-{
-	return ACCOUNT_ERROR_NONE;
-}
-
-ACCOUNT_API int account_type_set_service_provider_id_internal(account_type_h account_type, const char *service_provider_id)
+ACCOUNT_INTERNAL_API int account_type_set_service_provider_id(account_type_h account_type, const char *service_provider_id)
 {
 	if (!account_type) {
 		return ACCOUNT_ERROR_INVALID_PARAMETER;
@@ -1938,12 +1952,7 @@ ACCOUNT_API int account_type_set_service_provider_id_internal(account_type_h acc
 	return ACCOUNT_ERROR_NONE;
 }
 
-ACCOUNT_API int account_type_set_icon_path(account_type_h account_type, const char *icon_path)
-{
-	return ACCOUNT_ERROR_NONE;
-}
-
-ACCOUNT_API int account_type_set_icon_path_internal(account_type_h account_type, const char *icon_path)
+ACCOUNT_INTERNAL_API int account_type_set_icon_path(account_type_h account_type, const char *icon_path)
 {
 	if (!account_type) {
 		return ACCOUNT_ERROR_INVALID_PARAMETER;
@@ -1961,12 +1970,7 @@ ACCOUNT_API int account_type_set_icon_path_internal(account_type_h account_type,
 	return ACCOUNT_ERROR_NONE;
 }
 
-ACCOUNT_API int account_type_set_small_icon_path(account_type_h account_type, const char *small_icon_path)
-{
-	return ACCOUNT_ERROR_NONE;
-}
-
-ACCOUNT_API int account_type_set_small_icon_path_internal(account_type_h account_type, const char *small_icon_path)
+ACCOUNT_INTERNAL_API int account_type_set_small_icon_path(account_type_h account_type, const char *small_icon_path)
 {
 	if (!account_type) {
 		return ACCOUNT_ERROR_INVALID_PARAMETER;
@@ -1984,12 +1988,7 @@ ACCOUNT_API int account_type_set_small_icon_path_internal(account_type_h account
 	return ACCOUNT_ERROR_NONE;
 }
 
-ACCOUNT_API int account_type_set_multiple_account_support(account_type_h account_type, const bool multiple_account_support)
-{
-	return ACCOUNT_ERROR_NONE;
-}
-
-ACCOUNT_API int account_type_set_multiple_account_support_internal(account_type_h account_type, const bool multiple_account_support)
+ACCOUNT_INTERNAL_API int account_type_set_multiple_account_support(account_type_h account_type, const bool multiple_account_support)
 {
 	ACCOUNT_RETURN_VAL((account_type != NULL), {}, ACCOUNT_ERROR_INVALID_PARAMETER, ("(%s)-(%d) account handle is NULL.\n",  __FUNCTION__, __LINE__));
 
@@ -2000,12 +1999,7 @@ ACCOUNT_API int account_type_set_multiple_account_support_internal(account_type_
 	return ACCOUNT_ERROR_NONE;
 }
 
-ACCOUNT_API int account_type_set_label(account_type_h account_type, const char* label, const char* locale)
-{
-	return ACCOUNT_ERROR_NONE;
-}
-
-ACCOUNT_API int account_type_set_label_internal(account_type_h account_type, const char* label, const char* locale)
+ACCOUNT_INTERNAL_API int account_type_set_label(account_type_h account_type, const char* label, const char* locale)
 {
 	if (!account_type) {
 		ACCOUNT_SLOGE("(%s)-(%d) account_type handle is NULL.\n", __FUNCTION__, __LINE__);
@@ -2032,12 +2026,7 @@ ACCOUNT_API int account_type_set_label_internal(account_type_h account_type, con
 	return ACCOUNT_ERROR_NONE;
 }
 
-ACCOUNT_API int account_type_set_provider_feature(account_type_h account_type, const char* provider_feature)
-{
-	return ACCOUNT_ERROR_NONE;
-}
-
-ACCOUNT_API int account_type_set_provider_feature_internal(account_type_h account_type, const char* provider_feature)
+ACCOUNT_INTERNAL_API int account_type_set_provider_feature(account_type_h account_type, const char* provider_feature)
 {
 	ACCOUNT_RETURN_VAL((account_type != NULL), {}, ACCOUNT_ERROR_INVALID_PARAMETER, ("account type handle is null"));
 	ACCOUNT_RETURN_VAL((provider_feature != NULL), {}, ACCOUNT_ERROR_INVALID_PARAMETER, ("provider_feature is null"));
@@ -2074,7 +2063,7 @@ ACCOUNT_API int account_type_set_provider_feature_internal(account_type_h accoun
 ACCOUNT_API int account_type_query_provider_feature_by_app_id(provider_feature_cb callback, const char* app_id, void *user_data )
 {
 	_INFO("account_type_query_provider_feature_by_app_id start");
-	char* account_db_path = ACCOUNT_DB_NAME;
+	char* account_db_path = ACCOUNT_DB_PATH;
 
 	ACCOUNT_RETURN_VAL((app_id != NULL), {}, ACCOUNT_ERROR_INVALID_PARAMETER, ("APP ID IS NULL"));
 	ACCOUNT_RETURN_VAL((callback != NULL), {}, ACCOUNT_ERROR_INVALID_PARAMETER, ("NO CALLBACK FUNCTION"));
@@ -2096,7 +2085,8 @@ ACCOUNT_API int account_type_query_provider_feature_by_app_id(provider_feature_c
 
 	if (!is_success)
 	{
-		error_code = error->code;
+//		error_code = error->code;
+		error_code = _account_get_error_code(is_success, error);
 		_ERR("Account IPC call returned error[%d]", error_code);
 		return error_code;
 	}
@@ -2128,7 +2118,7 @@ ACCOUNT_API int account_type_query_provider_feature_by_app_id(provider_feature_c
 ACCOUNT_API bool account_type_query_supported_feature(const char* app_id, const char* capability)
 {
 	_INFO("account_type_query_supported_feature start");
-	char* account_db_path = ACCOUNT_DB_NAME;
+	char* account_db_path = ACCOUNT_DB_PATH;
 
 	if (app_id == NULL || capability == NULL)
 	{
@@ -2154,7 +2144,8 @@ ACCOUNT_API bool account_type_query_supported_feature(const char* app_id, const 
 
 	if (!is_success)
 	{
-		ret = error->code;
+		ret = _account_get_error_code(is_success, error);
+//		ret = error->code;
 		_ERR("Account IPC call returned error[%d]", ret);
 		set_last_result(ret);
 		return false;
@@ -2340,15 +2331,10 @@ ACCOUNT_API int account_type_get_label(account_type_h account_type, account_labe
 	return ACCOUNT_ERROR_NONE;
 }
 
-ACCOUNT_API int account_type_insert_to_db(account_type_h account_type, int* account_type_id)
-{
-	return ACCOUNT_ERROR_NONE;
-}
-
-ACCOUNT_API int account_type_insert_to_db_internal(account_type_h account_type, int* account_type_id)
+ACCOUNT_INTERNAL_API int account_type_insert_to_db(account_type_h account_type, int* account_type_id)
 {
 	_INFO("account_type_insert_to_db starting");
-	char* account_db_path = ACCOUNT_DB_NAME;
+	char* account_db_path = ACCOUNT_DB_PATH;
 
 	ACCOUNT_RETURN_VAL((account_type != NULL), {}, ACCOUNT_ERROR_INVALID_PARAMETER, ("ACCOUNT TYPE HANDLE IS NULL"));
 	ACCOUNT_RETURN_VAL((account_type_id != NULL), {}, ACCOUNT_ERROR_INVALID_PARAMETER, ("ACCOUNT TYPE ID POINTER IS NULL"));
@@ -2382,15 +2368,10 @@ ACCOUNT_API int account_type_insert_to_db_internal(account_type_h account_type, 
 	return ACCOUNT_ERROR_NONE;
 }
 
-ACCOUNT_API int account_type_update_to_db_by_app_id(const account_type_h account_type, const char* app_id)
-{
-	return ACCOUNT_ERROR_NONE;
-}
-
-ACCOUNT_API int account_type_update_to_db_by_app_id_internal(const account_type_h account_type, const char* app_id)
+ACCOUNT_INTERNAL_API int account_type_update_to_db_by_app_id(const account_type_h account_type, const char* app_id)
 {
 	_INFO("account_type_update_to_db_by_app_id starting");
-	char* account_db_path = ACCOUNT_DB_NAME;
+	char* account_db_path = ACCOUNT_DB_PATH;
 
 	ACCOUNT_RETURN_VAL((account_type != NULL), {}, ACCOUNT_ERROR_INVALID_PARAMETER, ("DATA IS NULL"));
 	ACCOUNT_RETURN_VAL((app_id != NULL), {}, ACCOUNT_ERROR_INVALID_PARAMETER, ("APP ID IS NULL"));
@@ -2416,15 +2397,10 @@ ACCOUNT_API int account_type_update_to_db_by_app_id_internal(const account_type_
 	return _account_get_error_code(is_success, error);
 }
 
-ACCOUNT_API int account_type_delete_by_app_id(const char* app_id)
-{
-	return ACCOUNT_ERROR_NONE;
-}
-
-ACCOUNT_API int account_type_delete_by_app_id_internal(const char* app_id)
+ACCOUNT_INTERNAL_API int account_type_delete_by_app_id(const char* app_id)
 {
 	_INFO("account_type_delete_by_app_id starting");
-	char* account_db_path = ACCOUNT_DB_NAME;
+	char* account_db_path = ACCOUNT_DB_PATH;
 
 	ACCOUNT_RETURN_VAL((app_id != NULL), {}, ACCOUNT_ERROR_INVALID_PARAMETER, ("APP ID IS NULL"));
 
@@ -2445,7 +2421,7 @@ ACCOUNT_API int account_type_delete_by_app_id_internal(const char* app_id)
 ACCOUNT_API int account_type_query_label_by_app_id(account_label_cb callback, const char* app_id, void *user_data )
 {
 	_INFO("account_type_query_label_by_app_id starting");
-	char* account_db_path = ACCOUNT_DB_NAME;
+	char* account_db_path = ACCOUNT_DB_PATH;
 
 	ACCOUNT_RETURN_VAL((callback != NULL), {}, ACCOUNT_ERROR_INVALID_PARAMETER, ("ACCOUNT Callback IS NULL"));
 	ACCOUNT_RETURN_VAL((app_id != NULL), {}, ACCOUNT_ERROR_INVALID_PARAMETER, ("APP ID IS NULL"));
@@ -2498,7 +2474,7 @@ ACCOUNT_API int account_type_query_label_by_app_id(account_label_cb callback, co
 ACCOUNT_API int account_type_query_by_app_id(const char* app_id, account_type_h *account_type)
 {
 	_INFO("account_type_query_by_app_id starting");
-	char* account_db_path = ACCOUNT_DB_NAME;
+	char* account_db_path = ACCOUNT_DB_PATH;
 
 	ACCOUNT_RETURN_VAL((app_id != 0), {}, ACCOUNT_ERROR_INVALID_PARAMETER, ("APP ID IS NULL"));
 	ACCOUNT_RETURN_VAL((account_type != NULL), {}, ACCOUNT_ERROR_INVALID_PARAMETER, ("ACCOUNT TYPE'S POINTER IS NULL"));
@@ -2524,21 +2500,20 @@ ACCOUNT_API int account_type_query_by_app_id(const char* app_id, account_type_h 
 		return ret;
 	}
 
-	_INFO("before umarshal_account_type");
 	account_type_s* received_account_type = umarshal_account_type (account_type_variant);
-	_INFO("after umarshal_account_type");
 	ACCOUNT_RETURN_VAL((received_account_type != NULL), {}, ACCOUNT_ERROR_DB_FAILED, ("INVALID DATA RECEIVED FROM SVC"));
 
 	in_data->id = received_account_type->id;
-	in_data->app_id = received_account_type->app_id;
-	in_data->service_provider_id = received_account_type->service_provider_id;
-	in_data->icon_path = received_account_type->icon_path;
-	in_data->small_icon_path = received_account_type->small_icon_path;
+	in_data->app_id = _account_get_text(received_account_type->app_id);
+	in_data->service_provider_id = _account_get_text(received_account_type->service_provider_id);
+	in_data->icon_path = _account_get_text(received_account_type->icon_path);
+	in_data->small_icon_path = _account_get_text(received_account_type->small_icon_path);
 	in_data->multiple_account_support = received_account_type->multiple_account_support;
 	in_data->label_list = received_account_type->label_list;
-	in_data->account_type_list = received_account_type->account_type_list;
 	in_data->provider_feature_list = received_account_type->provider_feature_list;
 
+	_account_type_item_free(received_account_type);
+	_ACCOUNT_FREE(received_account_type);
 	_INFO("account_type_query_by_app_id end");
 	return ACCOUNT_ERROR_NONE;
 }
@@ -2546,7 +2521,7 @@ ACCOUNT_API int account_type_query_by_app_id(const char* app_id, account_type_h 
 ACCOUNT_API int account_type_foreach_account_type_from_db(account_type_cb callback, void *user_data)
 {
 	_INFO("account_type_foreach_account_type_from_db starting");
-	char* account_db_path = ACCOUNT_DB_NAME;
+	char* account_db_path = ACCOUNT_DB_PATH;
 
 	ACCOUNT_RETURN_VAL((callback != NULL), {}, ACCOUNT_ERROR_INVALID_PARAMETER, ("ACCOUNT Callback IS NULL"));
 
@@ -2592,14 +2567,14 @@ ACCOUNT_API int account_type_foreach_account_type_from_db(account_type_cb callba
 			break;
 		}
 	}
-	_INFO("account_foreach_account_from_db end");
+	_INFO("account_type_foreach_account_type_from_db end");
 	return ACCOUNT_ERROR_NONE;
 }
 
 ACCOUNT_API int account_type_query_label_by_locale(const char* app_id, const char* locale, char** label)
 {
 	_INFO("account_type_query_label_by_locale starting");
-	char* account_db_path = ACCOUNT_DB_NAME;
+	char* account_db_path = ACCOUNT_DB_PATH;
 
 	ACCOUNT_RETURN_VAL((app_id != NULL), {}, ACCOUNT_ERROR_INVALID_PARAMETER, ("NO APP ID"));
 	ACCOUNT_RETURN_VAL((locale != NULL), {}, ACCOUNT_ERROR_INVALID_PARAMETER, ("NO LOCALE"));
@@ -2639,7 +2614,7 @@ ACCOUNT_API int account_type_query_label_by_locale(const char* app_id, const cha
 ACCOUNT_API int account_type_query_by_provider_feature(account_type_cb callback, const char* key, void* user_data)
 {
 	_INFO("account_type_query_by_provider_feature starting");
-	char* account_db_path = ACCOUNT_DB_NAME;
+	char* account_db_path = ACCOUNT_DB_PATH;
 
 	ACCOUNT_RETURN_VAL((key != NULL), {}, ACCOUNT_ERROR_INVALID_PARAMETER, ("capability_type IS NULL"));
 	ACCOUNT_RETURN_VAL((callback != NULL), {}, ACCOUNT_ERROR_INVALID_PARAMETER, ("CALL BACK IS NULL"));
@@ -2692,7 +2667,7 @@ ACCOUNT_API int account_type_query_by_provider_feature(account_type_cb callback,
 ACCOUNT_API int account_type_query_app_id_exist(const char* app_id)
 {
 	_INFO("account_type_query_app_id_exist starting");
-	char* account_db_path = ACCOUNT_DB_NAME;
+	char* account_db_path = ACCOUNT_DB_PATH;
 
 	ACCOUNT_RETURN_VAL((app_id != 0), {}, ACCOUNT_ERROR_INVALID_PARAMETER, ("APP ID IS NULL"));
 
@@ -2715,6 +2690,7 @@ static void _account_subscribe_vconf_callback(keynode_t *key, void *user_data)
 {
 	account_subscribe_s* tmp = (account_subscribe_s*)user_data;
 	char *msg = NULL, *vconf_key = NULL;
+	const char *key_name = NULL;
 	char event_msg[256] ={0, };
 	int account_id = -1;
 
@@ -2728,7 +2704,14 @@ static void _account_subscribe_vconf_callback(keynode_t *key, void *user_data)
 		return;
 	}
 
-	if(!memcmp(vconf_keynode_get_name(key), VCONFKEY_ACCOUNT_MSG_STR, strlen(VCONFKEY_ACCOUNT_MSG_STR)))
+	key_name = vconf_keynode_get_name(key);
+
+	if ( key_name == NULL ) {
+		ACCOUNT_ERROR("vconf_keynode_get_name(key) fail\n");
+		return;
+	}
+
+	if(!memcmp(key_name, VCONFKEY_ACCOUNT_MSG_STR, strlen(VCONFKEY_ACCOUNT_MSG_STR)))
 	{
 		vconf_key = vconf_keynode_get_str(key);
 
@@ -2825,6 +2808,7 @@ static void _account_subscribe_vconf_callback_ex(keynode_t *key, void *user_data
 	char *msg = NULL, *vconf_key = NULL;
 	char event_msg[256] ={0, };
 	int account_id = -1;
+	const char *key_name = NULL;
 
 	if(!key) {
 		ACCOUNT_ERROR("No subscribtion msg !!!!!\n");
@@ -2836,7 +2820,14 @@ static void _account_subscribe_vconf_callback_ex(keynode_t *key, void *user_data
 		return;
 	}
 
-	if(!memcmp(vconf_keynode_get_name(key), VCONFKEY_ACCOUNT_MSG_STR, strlen(VCONFKEY_ACCOUNT_MSG_STR)))
+	key_name = vconf_keynode_get_name(key);
+
+	if ( key_name == NULL ) {
+		ACCOUNT_ERROR("vconf_keynode_get_name(key) fail\n");
+		return;
+	}
+
+	if(!memcmp(key_name, VCONFKEY_ACCOUNT_MSG_STR, strlen(VCONFKEY_ACCOUNT_MSG_STR)))
 	{
 		vconf_key = vconf_keynode_get_str(key);
 

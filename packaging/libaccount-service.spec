@@ -8,15 +8,13 @@ License:    Apache-2.0
 Source0:    libaccount-service-%{version}.tar.gz
 
 BuildRequires:  cmake
-BuildRequires:  pkgconfig(glib-2.0)
 BuildRequires:  pkgconfig(dlog)
-BuildRequires:  pkgconfig(dbus-1)
 BuildRequires:  pkgconfig(capi-base-common)
 BuildRequires:  pkgconfig(vconf)
 BuildRequires:	pkgconfig(glib-2.0) >= 2.26
-BuildRequires:  pkgconfig(gio-2.0)
 BuildRequires:  pkgconfig(gio-unix-2.0)
-BuildRequires:  python-xml
+BuildRequires:  pkgconfig(account-common)
+BuildRequires:  pkgconfig(db-util)
 
 %description
 Account DB libraryXB-Public-Package: no
@@ -48,7 +46,10 @@ Development files for %{name}
 
 export CFLAGS="${CFLAGS} -fPIC -fvisibility=hidden"
 #cmake . -DCMAKE_INSTALL_PREFIX=/usr
-cmake . -DCMAKE_INSTALL_PREFIX=%{_prefix} -DLIBDIR=%{_libdir} -DINCLUDEDIR=%{_includedir}
+cmake . -DCMAKE_INSTALL_PREFIX=%{_prefix} \
+	-DLIBDIR=%{_libdir} \
+	-DBINDIR=%{_bindir} \
+	-DINCLUDEDIR=%{_includedir}
 
 make %{?jobs:-j%jobs}
 
@@ -62,10 +63,12 @@ mkdir -p %{buildroot}%{_libdir}/systemd/system/multi-user.target.wants
 rm -rf %{buildroot}%{_libdir}/accounts-svc
 
 %files
+%manifest libaccount-service.manifest
 %defattr(-,root,root,-)
 %{_libdir}/*.so.*
 
 %files devel
+%manifest libaccount-service.manifest
 %defattr(-,root,root,-)
 %{_libdir}/*.so
 %{_libdir}/pkgconfig/accounts-svc.pc
