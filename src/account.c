@@ -425,7 +425,7 @@ int _account_delete_from_db_by_package_name(const char *package_name, bool permi
 		_ERR("g_bus_get_sync failed");
 		return ACCOUNT_ERROR_PERMISSION_DENIED;
 	}
-
+/*
 	//First get account list of user_name, used for gSSO DB deletion
 	GVariant* account_list_variant = NULL;
 	bool is_success = account_manager_call_account_query_account_by_package_name_sync(acc_mgr, account_db_path, package_name, &account_list_variant, NULL, &error);
@@ -443,8 +443,8 @@ int _account_delete_from_db_by_package_name(const char *package_name, bool permi
 	{
 		return ACCOUNT_ERROR_NO_DATA;
 	}
-
-	is_success = account_manager_call_account_delete_from_db_by_package_name_sync(acc_mgr, account_db_path, package_name, permission, NULL, &error);
+*/
+	bool is_success = account_manager_call_account_delete_from_db_by_package_name_sync(acc_mgr, account_db_path, package_name, permission, NULL, &error);
 
 	if (!is_success)
 	{
@@ -458,7 +458,7 @@ int _account_delete_from_db_by_package_name(const char *package_name, bool permi
 
 ACCOUNT_API int account_delete_from_db_by_package_name(const char *package_name)
 {
-	_INFO("account_delete_from_db_by_package_name starting with permission");
+	_INFO("account_delete_from_db_by_package_name start");
 	return _account_delete_from_db_by_package_name(package_name, true);
 }
 
