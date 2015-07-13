@@ -49,7 +49,12 @@ export CFLAGS="${CFLAGS} -fPIC -fvisibility=hidden"
 cmake . -DCMAKE_INSTALL_PREFIX=%{_prefix} \
 	-DLIBDIR=%{_libdir} \
 	-DBINDIR=%{_bindir} \
-	-DINCLUDEDIR=%{_includedir}
+	-DINCLUDEDIR=%{_includedir} \
+#%if "%{?tizen_profile_name}" == "mobile"
+#	-DFEATURE_PROFILE_MOBILE:BOOL=ON
+#%else
+#	-DFEATURE_PROFILE_MOBILE:BOOL=OFF
+#%endif
 
 make %{?jobs:-j%jobs}
 

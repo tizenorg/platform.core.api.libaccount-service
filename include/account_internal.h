@@ -22,6 +22,9 @@
 #ifndef __ACCOUNT_INTERNAL_H__
 #define __ACCOUNT_INTERNAL_H__
 
+#include <account-types.h>
+#include <account.h>
+
 #ifdef __cplusplus
 extern "C"
 {
@@ -351,7 +354,7 @@ int account_type_delete_by_app_id(const char* app_id);
  * @see account_unsubscribe_notification()
  * @see account_subscribe_notification()
  */
-ACCOUNT_API int account_subscribe_notification_ex(account_subscribe_h account_subscribe, account_event_cb cb_func, void* user_data);
+int account_subscribe_notification_ex(account_subscribe_h account_subscribe, account_event_cb cb_func, void* user_data);
 
 /**
  * @internal
@@ -369,8 +372,27 @@ ACCOUNT_API int account_subscribe_notification_ex(account_subscribe_h account_su
  * @see account_unsubscribe_notification()
  * @see account_subscribe_notification()
  */
-ACCOUNT_API int account_unsubscribe_notification_ex(account_subscribe_h account_subscribe);
+int account_unsubscribe_notification_ex(account_subscribe_h account_subscribe);
 
+/**
+ * @internal
+ * @brief  Gets the count of accounts whose secrect state is visible in the account database.
+ * @since_tizen 2.3
+ *
+ * @privlevel   public
+ * @privilege   %http://tizen.org/privilege/account.read
+ * @param[out]  count  The out parameter for count of all accounts
+ *
+ * @return  @c 0 on success,
+ *          otherwise a negative error value
+ * @retval  #ACCOUNT_ERROR_NONE       Successful
+ * @retval  #ACCOUNT_ERROR_DB_FAILED  Database operation failed
+ * @retval  #ACCOUNT_ERROR_ACCESS_DENIED DB Access fail by permission
+ *
+ * @pre  This function requires an open connection to an account service by account_connect().
+ *
+ */
+int account_get_total_count_from_db_ex(int *count);
 
 /*offline apis*/
 int account_type_insert_to_db_offline(account_type_h account_type, int* account_type_id);
