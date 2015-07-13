@@ -28,8 +28,13 @@ extern "C"
 {
 #endif
 
-#include "account.h"
 #include "account-types.h"
+
+#ifdef TIZEN_PROFILE_MOBILE
+#include "mobile/account.h"
+#else
+#include "wearable/account.h"
+#endif
 
 typedef struct _account_subscribe_s
 {

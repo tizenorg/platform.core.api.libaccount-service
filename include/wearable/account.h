@@ -44,7 +44,7 @@ extern "C"
 /**
  * @brief   Called once for each account from the database.
  *
- * @since_tizen 2.3
+ * @since_tizen 2.4
  * @param[in]  account    The account handle
  * @param[in]  user_data  The user data passed from the foreach function
  *
@@ -63,7 +63,7 @@ typedef bool (*account_cb)(account_h account, void *user_data);
 /**
  * @brief  Called once for each capability of an account in the database.
  *
- * @since_tizen 2.3
+ * @since_tizen 2.4
  * @param[in]   capability_type  The capability type
  * @param[in]   capability_state The capability state
  * @param[in]   user_data        The user data passed from the foreach function
@@ -80,7 +80,7 @@ typedef bool (*capability_cb)(const char* capability_type, account_capability_st
 /**
  * @brief  Called once for each custom data of an account in the database.
  *
- * @since_tizen 2.3
+ * @since_tizen 2.4
  * @param[in]  key        The user custom key
  * @param[in]  value      The user custom value of the specific key
  * @param[in]  user_data  The user data passed
@@ -98,7 +98,7 @@ typedef bool (*account_custom_cb)(char* key, char* value, void *user_data);
 /**
  * @brief  Called once for each account provider in the database.
  *
- * @since_tizen 2.3
+ * @since_tizen 2.4
  * @param[in]  account_type  The account provider handle
  * @param[in]  user_data     The user data passed
  *
@@ -116,7 +116,7 @@ typedef bool (*account_type_cb)(account_type_h account_type, void *user_data);
 /**
  * @brief  Called once for each account label.
  *
- * @since_tizen 2.3
+ * @since_tizen 2.4
  * @param[in]  app_id     The application ID
  * @param[in]  label      The name of the account depends on the specified locale
  * @param[in]  locale     The locale is specified as an ISO 3166 alpha-2 two letter country-code followed by ISO 639-1 for the two-letter language code.\n
@@ -137,7 +137,7 @@ typedef bool (*account_label_cb)(char* app_id, char* label, char* locale, void *
 /**
  * @brief  Called once for each capability of an account provider in the database.
  *
- * @since_tizen 2.3
+ * @since_tizen 2.4
  * @param[in]  app_id     The application ID
  * @param[in]  key        The user custom key
  * @param[in]  user_data  The user data passed
@@ -156,7 +156,7 @@ typedef bool (*provider_feature_cb)(char* app_id, char* key, void* user_data);
 /**
  * @brief Called once when an event occurs.
  *
- * @since_tizen 2.3
+ * @since_tizen 2.4
  * @param[in]  event_type  The account event type
  * @param[in]  account_id  The account ID to update
  * @param[in]  user_data   The user data passed
@@ -170,59 +170,10 @@ typedef bool (*provider_feature_cb)(char* app_id, char* key, void* user_data);
  */
 typedef bool (*account_event_cb)(const char* event_type, int account_id, void* user_data);
 
-
-/**
- * @deprecated Deprecated since Tizen 2.4.\n
- *             This API is not necessary to use since Tizen 2.4.
- * @brief      Connects to the account database by readwrite mode.
- *
- * @since_tizen 2.3
- * @privlevel  public
- * @privilege  %http://tizen.org/privilege/account.read \n
- *             %http://tizen.org/privilege/account.wirte
- * @remarks    This API need both privileges
- * @return     @c 0 on success,
- *             otherwise a negative error value
- * @retval     #ACCOUNT_ERROR_NONE               Successful
- * @retval     #ACCOUNT_ERROR_DB_NOT_OPENED      DB is not connected
- * @retval     #ACCOUNT_ERROR_PERMISSION_DENIED  DB Access fail by permission
- */
-int account_connect(void);
-
-
-/**
- * @deprecated Deprecated since Tizen 2.4.\n
- *             This API is not necessary to use since Tizen 2.4.
- * @brief      Connects to the account database by readonly mode.
- *
- * @since_tizen 2.3
- * @return     @c 0 on success,
- *             otherwise a negative error value
- * @retval     #ACCOUNT_ERROR_NONE               Successful
- * @retval     #ACCOUNT_ERROR_DB_NOT_OPENED      DB is not connected
- * @retval     #ACCOUNT_ERROR_PERMISSION_DENIED  DB Access fail by permission
- */
-int account_connect_readonly(void);
-
-
-/**
- * @deprecated Deprecated since Tizen 2.4.\n
- *             This API is not necessary to use since Tizen 2.4.
- * @brief      Disconnects from the account database.
- *
- * @since_tizen 2.3
- * @return     @c 0 on success,
- *             otherwise a negative error value
- * @retval     #ACCOUNT_ERROR_NONE               Successful
- * @retval     #ACCOUNT_ERROR_PERMISSION_DENIED  DB Access fail by permission
- * @retval     #ACCOUNT_ERROR_DATABASE_BUSY      SQLite busy handler exprired
- */
-int account_disconnect(void);
-
 /**
  * @brief  Creates a handle to the account.
  *
- * @since_tizen 2.3
+ * @since_tizen 2.4
  * @remarks    Release @a account using account_destroy().
  * @remarks    The created handle is not added to the account database until account_insert_to_db() is called.
  *
@@ -242,7 +193,7 @@ int account_create(account_h *account);
 /**
  * @brief  Destroys the account handle and releases all its resources.
  *
- * @since_tizen 2.3
+ * @since_tizen 2.4
  * @param[in]  account  The account handle
  *
  * @return     @c 0 on success,
@@ -258,7 +209,7 @@ int account_destroy(account_h account);
 /**
  * @brief  Inserts the account details to the account database.
  *
- * @since_tizen 2.3
+ * @since_tizen 2.4
  * @privlevel   public
  * @privilege   %http://tizen.org/privilege/account.read \n
  *              %http://tizen.org/privilege/account.write
@@ -279,9 +230,6 @@ int account_destroy(account_h account);
  * @retval  #ACCOUNT_ERROR_DATABASE_BUSY            SQLite handler is busy
  * @retval  #ACCOUNT_ERROR_DB_NOT_OPENED            Account database did not opened
  *
- * @pre  This function requires an open connection to an account service by account_connect() on tizen 2.3.\n
- *       But the account_connect() is not required to use this function since tizen 2.4.
- *
  * @see account_delete_from_db_by_id()
  * @see account_delete_from_db_by_user_name()
  * @see account_delete_from_db_by_package_name()
@@ -294,7 +242,7 @@ int account_insert_to_db(account_h account, int *account_db_id);
 /**
  * @brief  Deletes an account from the account database by account DB ID.
  *
- * @since_tizen 2.3
+ * @since_tizen 2.4
  * @privlevel  public
  * @privilege  %http://tizen.org/privilege/account.read \n
  *             %http://tizen.org/privilege/account.write
@@ -312,9 +260,6 @@ int account_insert_to_db(account_h account, int *account_db_id);
  * @retval  #ACCOUNT_ERROR_DATABASE_BUSY      SQLite handler is busy
  * @retval  #ACCOUNT_ERROR_DB_NOT_OPENED      Account database did not opened
  *
- * @pre  This function requires an open connection to an account service by account_connect() on tizen 2.3.\n
- *       But the account_connect() is not required to use this function since tizen 2.4.
- *
  * @see account_insert_to_db()
  * @see account_delete_from_db_by_user_name()
  * @see account_delete_from_db_by_package_name()
@@ -327,7 +272,7 @@ int account_delete_from_db_by_id(int account_db_id);
 /**
  * @brief  Deletes an account from the account database by user name.
  *
- * @since_tizen 2.3
+ * @since_tizen 2.4
  * @privlevel  public
  * @privilege  %http://tizen.org/privilege/account.read \n
  *             %http://tizen.org/privilege/account.write
@@ -346,9 +291,6 @@ int account_delete_from_db_by_id(int account_db_id);
  * @retval  #ACCOUNT_ERROR_DATABASE_BUSY      SQLite handler is busy
  * @retval  #ACCOUNT_ERROR_DB_NOT_OPENED      Account database did not opened
  *
- * @pre  This function requires an open connection to an account service by account_connect() on tizen 2.3.\n
- *       But the account_connect() is not required to use this function since tizen 2.4.
- *
  * @see account_insert_to_db()
  * @see account_delete_from_db_by_id()
  * @see account_delete_from_db_by_package_name()
@@ -361,7 +303,7 @@ int account_delete_from_db_by_user_name(char *user_name, char *package_name);
 /**
  * @brief  Deletes an account from the account database by package name.
  *
- * @since_tizen 2.3
+ * @since_tizen 2.4
  * @privlevel  public
  * @privilege  %http://tizen.org/privilege/account.read \n
  *             %http://tizen.org/privilege/account.write
@@ -378,9 +320,6 @@ int account_delete_from_db_by_user_name(char *user_name, char *package_name);
  * @retval  #ACCOUNT_ERROR_DATABASE_BUSY      SQLite handler is busy
  * @retval  #ACCOUNT_ERROR_DB_NOT_OPENED      Account database did not opened
  *
- * @pre  This function requires an open connection to an account service by account_connect() on tizen 2.3.\n
- *       But the account_connect() is not required to use this function since tizen 2.4.
- *
  * @see account_insert_to_db()
  * @see account_delete_from_db_by_id()
  * @see account_delete_from_db_by_user_name()
@@ -392,7 +331,7 @@ int account_delete_from_db_by_package_name(const char *package_name);
 /**
  * @brief  Updates the account details to the account database.
  *
- * @since_tizen 2.3
+ * @since_tizen 2.4
  * @privlevel  public
  * @privilege  %http://tizen.org/privilege/account.read \n
  *             %http://tizen.org/privilege/account.write
@@ -411,9 +350,6 @@ int account_delete_from_db_by_package_name(const char *package_name);
  * @retval  #ACCOUNT_ERROR_DATABASE_BUSY      SQLite handler is busy
  * @retval  #ACCOUNT_ERROR_DB_NOT_OPENED      Account database did not opened
  *
- * @pre  This function requires an open connection to an account service by account_connect() on tizen 2.3.\n
- *       But the account_connect() is not required to use this function since tizen 2.4.
- *
  * @see account_insert_to_db()
  * @see account_delete_from_db_by_id()
  * @see account_delete_from_db_by_user_name()
@@ -426,7 +362,7 @@ int account_update_to_db_by_id(account_h account, int account_id);
  * @brief      Updates the account details to the account database.
  *             The provider permission check has been added since tizen 2.4.
  *
- * @since_tizen 2.3
+ * @since_tizen 2.4
  * @privlevel  public
  * @privilege  %http://tizen.org/privilege/account.read \n
  *             %http://tizen.org/privilege/account.write
@@ -446,9 +382,6 @@ int account_update_to_db_by_id(account_h account, int account_id);
  * @retval  #ACCOUNT_ERROR_DATABASE_BUSY      SQLite handler is busy
  * @retval  #ACCOUNT_ERROR_DB_NOT_OPENED      Account database did not opened
  *
- * @pre  This function requires an open connection to an account service by account_connect() on tizen 2.3.\n
- *       But the account_connect() is not required to use this function since tizen 2.4.
- *
  * @see account_insert_to_db()
  * @see account_delete_from_db_by_id()
  * @see account_delete_from_db_by_user_name()
@@ -460,7 +393,7 @@ int account_update_to_db_by_id_ex(account_h account, int account_id);
 /**
  * @brief  Updates the account details to the account database.
  *
- * @since_tizen 2.3
+ * @since_tizen 2.4
  * @privlevel  public
  * @privilege  %http://tizen.org/privilege/account.read \n
  *             %http://tizen.org/privilege/account.write
@@ -480,9 +413,6 @@ int account_update_to_db_by_id_ex(account_h account, int account_id);
  * @retval  #ACCOUNT_ERROR_DATABASE_BUSY      SQLite handler is busy
  * @retval  #ACCOUNT_ERROR_DB_NOT_OPENED      Account database did not opened
  *
- * @pre  This function requires an open connection to an account service by account_connect() on tizen 2.3.\n
- *       But the account_connect() is not required to use this function since tizen 2.4.
- *
  * @see account_insert_to_db()
  * @see account_delete_from_db_by_id()
  * @see account_delete_from_db_by_user_name()
@@ -495,7 +425,7 @@ int account_update_to_db_by_user_name(account_h account, const char *user_name, 
 /**
  * @brief  Gets the ID of an account.
  *
- * @since_tizen 2.3
+ * @since_tizen 2.4
  * @param[in]   account     The account handle
  * @param[out]  account_id  The account ID
  *
@@ -510,7 +440,7 @@ int account_get_account_id(account_h account, int *account_id);
 /**
  * @brief  Gets the user name of an account.
  *
- * @since_tizen 2.3
+ * @since_tizen 2.4
  * @remarks    You must release @a user_name using free().
  *
  * @param[in]   account    The account handle
@@ -530,7 +460,7 @@ int account_get_user_name(account_h account, char **user_name);
 /**
  * @brief  Sets the user name of an account.
  *
- * @since_tizen 2.3
+ * @since_tizen 2.4
  * @param[in]  account    The account handle
  * @param[in]  user_name  The string to set as user name
  *
@@ -547,7 +477,7 @@ int account_set_user_name(account_h account, const char *user_name);
 /**
  * @brief  Gets the display name of an account.
  *
- * @since_tizen 2.3
+ * @since_tizen 2.4
  * @remarks    You must release @a display_name using free().
  *
  * @param[in]   account       The account handle
@@ -567,7 +497,7 @@ int account_get_display_name(account_h account, char **display_name);
 /**
  * @brief  Sets the display name of an account.
  *
- * @since_tizen 2.3
+ * @since_tizen 2.4
  * @param[in]  account      The account handle
  * @param[in]  display_name The text string to set as the display name
  *
@@ -583,7 +513,7 @@ int account_set_display_name(account_h account, const char *display_name);
 /**
  * @brief  Gets the capability detail of an account.
  *
- * @since_tizen 2.3
+ * @since_tizen 2.4
  * @param[in]   account           The account handle
  * @param[in]   capability_type   The capability type to get the capability value
  * @param[out]  capability_value  The capability value (on/off) of the specified capability_type
@@ -601,7 +531,7 @@ int account_get_capability(account_h account, const char* capability_type, accou
 /**
  * @brief  Gets all the capabilities of an account.
  *
- * @since_tizen 2.3
+ * @since_tizen 2.4
  * @param[in]  account    The account handle
  * @param[in]  callback   The callback function
  * @param[in]  user_data  The user data to be passed to the callback function
@@ -618,7 +548,7 @@ int account_get_capability_all(account_h account, capability_cb callback, void *
 /**
  * @brief  Sets the capability.
  *
- * @since_tizen 2.3
+ * @since_tizen 2.4
  * @param[in]  account           The account handle
  * @param[in]  capability_type   The capability type
  * @param[in]  capability_state  The capability state
@@ -636,7 +566,7 @@ int account_set_capability(account_h account, const char* capability_type, accou
 /**
  * @brief  Gets the icon path.
  *
- * @since_tizen 2.3
+ * @since_tizen 2.4
  * @remarks    You must release @a icon_path using free().
  *
  * @param[in]   account    The account handle
@@ -656,7 +586,7 @@ int account_get_icon_path(account_h account, char **icon_path);
 /**
  * @brief  Sets the icon path.
  *
- * @since_tizen 2.3
+ * @since_tizen 2.4
  * @param[in]  account    The account handle
  * @param[in]  icon_path  The text string to set as the icon path
  *
@@ -673,7 +603,7 @@ int account_set_icon_path(account_h account, const char *icon_path);
 /**
  * @brief  Gets the domain name.
  *
- * @since_tizen 2.3
+ * @since_tizen 2.4
  * @remarks    You must release @a domain_name using free().
  *
  * @param[in]   account      The account handle
@@ -693,7 +623,7 @@ int account_get_domain_name(account_h account, char **domain_name);
 /**
  * @brief  Sets the domain name.
  *
- * @since_tizen 2.3
+ * @since_tizen 2.4
  * @param[in]  account      The account handle
  * @param[in]  domain_name  The text string to set as the domain name
  *
@@ -710,7 +640,7 @@ int account_set_domain_name(account_h account, const char *domain_name);
 /**
  * @brief  Gets the email address.
  *
- * @since_tizen 2.3
+ * @since_tizen 2.4
  * @remarks    You must release @a email_address using free().
  *
  * @param[in]   account        The account handle
@@ -730,7 +660,7 @@ int account_get_email_address(account_h account, char **email_address);
 /**
  * @brief  Sets the email address.
  *
- * @since_tizen 2.3
+ * @since_tizen 2.4
  * @param[in]  account        The account handle
  * @param[in]  email_address  The text string to set as the email address
  *
@@ -747,7 +677,7 @@ int account_set_email_address(account_h account, const char *email_address);
 /**
  * @brief  Gets the package name.
  *
- * @since_tizen 2.3
+ * @since_tizen 2.4
  * @remarks    You must release @a package_name using free().
  *
  * @param[in]   account       The account handle
@@ -767,7 +697,7 @@ int account_get_package_name(account_h account, char **package_name);
 /**
  * @brief  Sets the package name.
  *
- * @since_tizen 2.3
+ * @since_tizen 2.4
  * @param[in]  account       The account handle
  * @param[in]  package_name  The text string to set as the package name
  *
@@ -784,7 +714,7 @@ int account_set_package_name(account_h account, const char *package_name);
 /**
  * @brief  Gets the access token. Access token field is used to store account secrets (such as password or master token).
  *
- * @since_tizen 2.3
+ * @since_tizen 2.4
  * @remarks    You must release @a access_token using free().
  *
  * @param[in]   account       The account handle
@@ -806,7 +736,7 @@ int account_get_access_token(account_h account, char **access_token);
 /**
  * @brief  Sets the access token. Access token field is used to store account secrets (such as password or master token).
  *
- * @since_tizen 2.3
+ * @since_tizen 2.4
  * @param[in]  account       The account handle
  * @param[in]  access_token  The text string to set as the access token
  *
@@ -823,7 +753,7 @@ int account_set_access_token(account_h account, const char *access_token);
 /**
  * @brief  Gets the user text.
  *
- * @since_tizen 2.3
+ * @since_tizen 2.4
  * @remarks    You must release @a user_text using free().
  *
  * @param[in]   account          The account handle
@@ -844,7 +774,7 @@ int account_get_user_text(account_h account, int user_text_index, char **user_te
 /**
  * @brief  Sets the user text.
  *
- * @since_tizen 2.3
+ * @since_tizen 2.4
  * @param[in]  account          The account handle
  * @param[in]  user_text_index  The index of the user text (must be in range from @c 0 to @c 4)
  * @param[in]  user_text        The text string to set as the user text
@@ -862,7 +792,7 @@ int account_set_user_text(account_h account, int user_text_index, const char *us
 /**
  * @brief  Gets the user integer.
  *
- * @since_tizen 2.3
+ * @since_tizen 2.4
  * @param[in]   account         The account handle
  * @param[in]   user_int_index  The index of the user integer (must be in range from @c 0 to @c 4)
  * @param[out]  user_integer    The user integer
@@ -880,7 +810,7 @@ int account_get_user_int(account_h account, int user_int_index, int *user_intege
 /**
  * @brief  Sets the user integer.
  *
- * @since_tizen 2.3
+ * @since_tizen 2.4
  * @param[in]  account         The account handle
  * @param[in]  user_int_index  The index of the user integer (must be in range from @c 0 to @c 4)
  * @param[in]  user_integer    The integer to set as the user integer
@@ -898,7 +828,7 @@ int account_set_user_int(account_h account, int user_int_index, int user_integer
 /**
  * @brief  Gets the auth type.
  *
- * @since_tizen 2.3
+ * @since_tizen 2.4
  * @param[in]   account    The account handle
  * @param[out]  auth_type  The auth type
  *
@@ -915,8 +845,8 @@ int account_get_auth_type(account_h account, account_auth_type_e *auth_type);
 /**
  * @brief  Sets the auth type.
  *
- * @since_tizen 2.3
-  * @param[in]  account    The account handle
+ * @since_tizen 2.4
+ * @param[in]  account    The account handle
  * @param[in]  auth_type  The integer to be set as the auth type
  *
  * @return  @c 0 on success,
@@ -932,7 +862,7 @@ int account_set_auth_type(account_h account, const account_auth_type_e auth_type
 /**
  * @brief  Gets the secret.
  *
- * @since_tizen 2.3
+ * @since_tizen 2.4
  * @param[in]   account  The account handle
  * @param[out]  secret   The secret
  *
@@ -949,7 +879,7 @@ int account_get_secret(account_h account, account_secrecy_state_e *secret);
 /**
  * @brief  Sets the secret.
  *
- * @since_tizen 2.3
+ * @since_tizen 2.4
  * @param[in]  account  The account handle
  * @param[in]  secret   The secrecy to be set
  *
@@ -965,7 +895,7 @@ int account_set_secret(account_h account, const account_secrecy_state_e secret);
 /**
  * @brief  Gets the sync support.
  *
- * @since_tizen 2.3
+ * @since_tizen 2.4
  * @param[in]   account       The account handle
  * @param[out]  sync_support  The sync support
  *
@@ -982,7 +912,7 @@ int account_get_sync_support(account_h account, account_sync_state_e *sync_suppo
 /**
  * @brief  Sets the sync support.
  *
- * @since_tizen 2.3
+ * @since_tizen 2.4
  * @param[in]  account       The account handle
  * @param[in]  sync_support  The sync state to be set
  *
@@ -999,7 +929,7 @@ int account_set_sync_support(account_h account, const account_sync_state_e sync_
 /**
  * @brief  Gets the source.
  *
- * @since_tizen 2.3
+ * @since_tizen 2.4
  * @remarks    You must release @a user_text using free().
  *
  * @param[in]   account  The account handle
@@ -1019,7 +949,7 @@ int account_get_source(account_h account, char **source);
 /**
  * @brief  Sets the source.
  *
- * @since_tizen 2.3
+ * @since_tizen 2.4
  * @param[in]  account  The account handle
  * @param[in]  source   The text string to set as the source
  *
@@ -1035,7 +965,7 @@ int account_set_source(account_h account, const char *source);
 /**
  * @brief  Sets the custom.
  *
- * @since_tizen 2.3
+ * @since_tizen 2.4
  * @param[in]  account  The account handle
  * @param[in]  key      The user custom key for the specific value
  * @param[in]  value    The user custom value about the given key
@@ -1052,7 +982,7 @@ int account_set_custom(account_h account, const char* key, const char* value);
 /**
  * @brief  Gets the user specific custom text of an account key.
  *
- * @since_tizen 2.3
+ * @since_tizen 2.4
  * @param[in]   account   The account handle
  * @param[in]   key       The key to retrieve custom text
  * @param[out]  value     The text of the given key
@@ -1071,7 +1001,7 @@ int account_get_custom(account_h account, const char* key, char** value);
 /**
  * @brief  Gets all the user custom texts of an account.
  *
- * @since_tizen 2.3
+ * @since_tizen 2.4
  * @param[in]  account    The account handle
  * @param[in]  callback   The callback function to retrieve all custom text \n
  *                        The callback function gives the key and value.
@@ -1089,7 +1019,7 @@ int account_get_custom_all(account_h account, account_custom_cb callback, void* 
 /**
  * @brief  Retrieves all accounts details by invoking the given callback function iteratively.
  *
- * @since_tizen 2.3
+ * @since_tizen 2.4
  * @privlevel   public
  * @privilege   %http://tizen.org/privilege/account.read
  * @param[in]   callback   The callback function to invoke
@@ -1105,8 +1035,6 @@ int account_get_custom_all(account_h account, account_custom_cb callback, void* 
  * @retval  #ACCOUNT_ERROR_DATABASE_BUSY      SQLite handler is busy
  * @retval  #ACCOUNT_ERROR_DB_NOT_OPENED      Account database did not opened
  *
- * @pre   This function requires an open connection to an account service by account_connect() on tizen 2.3.\n
- *        But the account_connect() is not required to use this function since tizen 2.4.
  * @post  This function invokes account_cb().
  *
  * @see account_query_account_by_account_id()
@@ -1120,7 +1048,7 @@ int account_foreach_account_from_db(account_cb callback, void *user_data);
 /**
  * @brief  Retrieve an account with the account ID.
  *
- * @since_tizen 2.3
+ * @since_tizen 2.4
  * @privlevel   public
  * @privilege   %http://tizen.org/privilege/account.read
  * @param[in]   account_db_id  The account database ID to search
@@ -1137,9 +1065,6 @@ int account_foreach_account_from_db(account_cb callback, void *user_data);
  * @retval  #ACCOUNT_ERROR_DATABASE_BUSY      SQLite handler is busy
  * @retval  #ACCOUNT_ERROR_DB_NOT_OPENED      Account database did not opened
  *
- * @pre  This function requires an open connection to an account service by account_connect() on tizen 2.3.\n
- *       But the account_connect() is not required to use this function since tizen 2.4.
- *
  * @see account_query_account_by_user_name()
  * @see account_query_account_by_package_name()
  * @see account_query_account_by_capability()
@@ -1149,7 +1074,7 @@ int account_query_account_by_account_id(int account_db_id, account_h *account);
 /**
  * @brief  Retrieves all accounts with the user name.
  *
- * @since_tizen 2.3
+ * @since_tizen 2.4
  * @privlevel   public
  * @privilege   %http://tizen.org/privilege/account.read
  * @param[in]   callback   The callback function to invoke
@@ -1166,8 +1091,6 @@ int account_query_account_by_account_id(int account_db_id, account_h *account);
  * @retval  #ACCOUNT_ERROR_DATABASE_BUSY      SQLite handler is busy
  * @retval  #ACCOUNT_ERROR_DB_NOT_OPENED      Account database did not opened
  *
- * @pre   This function requires an open connection to an account service by account_connect() on tizen 2.3.\n
- *        But the account_connect() is not required to use this function since tizen 2.4.
  * @post  This function invokes account_cb().
  *
  * @see account_foreach_account_from_db()
@@ -1181,7 +1104,7 @@ int account_query_account_by_user_name(account_cb callback, const char* user_nam
 /**
  * @brief  Retrieves all accounts with the package name.
  *
- * @since_tizen 2.3
+ * @since_tizen 2.4
  * @privlevel  public
  * @privilege  %http://tizen.org/privilege/account.read
  * @param[in]  callback      The callback function to invoke
@@ -1198,8 +1121,6 @@ int account_query_account_by_user_name(account_cb callback, const char* user_nam
  * @retval  #ACCOUNT_ERROR_DATABASE_BUSY      SQLite handler is busy
  * @retval  #ACCOUNT_ERROR_DB_NOT_OPENED      Account database did not opened
  *
- * @pre   This function requires an open connection to an account service by account_connect() on tizen 2.3.\n
- *        But the account_connect() is not required to use this function since tizen 2.4.
  * @post  This function invokes account_cb().
  *
  * @see account_foreach_account_from_db()
@@ -1212,7 +1133,7 @@ int account_query_account_by_package_name(account_cb callback, const char *packa
 /**
  * @brief  Retrieves all accounts with the capability type and capability value.
  *
- * @since_tizen 2.3
+ * @since_tizen 2.4
  * @privlevel   public
  * @privilege   %http://tizen.org/privilege/account.read
  * @param[in]   callback          The callback function to invoke
@@ -1230,8 +1151,6 @@ int account_query_account_by_package_name(account_cb callback, const char *packa
  * @retval  #ACCOUNT_ERROR_DATABASE_BUSY      SQLite handler is busy
  * @retval  #ACCOUNT_ERROR_DB_NOT_OPENED      Account database did not opened
  *
- * @pre   This function requires an open connection to an account service by account_connect() on tizen 2.3.\n
- *        But the account_connect() is not required to use this function since tizen 2.4.
  * @post  This function invokes account_cb().
  *
  * @see account_foreach_account_from_db()
@@ -1244,7 +1163,7 @@ int account_query_account_by_capability(account_cb callback, const char* capabil
 /**
  * @brief  Retrieves all accounts with the capability type.
  *
- * @since_tizen 2.3
+ * @since_tizen 2.4
  * @privlevel   public
  * @privilege   %http://tizen.org/privilege/account.read
  * @param[in]   callback         The callback function to invoke
@@ -1261,8 +1180,6 @@ int account_query_account_by_capability(account_cb callback, const char* capabil
  * @retval  #ACCOUNT_ERROR_DATABASE_BUSY      SQLite handler is busy
  * @retval  #ACCOUNT_ERROR_DB_NOT_OPENED      Account database did not opened
  *
- * @pre   This function requires an open connection to an account service by account_connect() on tizen 2.3.\n
- *        But the account_connect() is not required to use this function since tizen 2.4.
  * @post  This function invokes account_cb().
  *
  * @see account_foreach_account_from_db()
@@ -1275,7 +1192,7 @@ int account_query_account_by_capability_type(account_cb callback, const char* ca
 /**
  * @brief  Retrieves all capabilities with the account database ID.
  *
- * @since_tizen 2.3
+ * @since_tizen 2.4
  * @privlevel   public
  * @privilege   %http://tizen.org/privilege/account.read
  * @param[in]   callback       The callback function to invoke
@@ -1292,8 +1209,6 @@ int account_query_account_by_capability_type(account_cb callback, const char* ca
  * @retval  #ACCOUNT_ERROR_DATABASE_BUSY      SQLite handler is busy
  * @retval  #ACCOUNT_ERROR_DB_NOT_OPENED      Account database did not opened
  *
- * @pre   This function requires an open connection to an account service by account_connect() on tizen 2.3.\n
- *        But the account_connect() is not required to use this function since tizen 2.4.
  * @post  This function invokes capability_cb().
  *
  * @see account_get_capability()
@@ -1305,7 +1220,7 @@ int account_query_capability_by_account_id(capability_cb callback, int account_d
 /**
  * @brief  Gets the count of accounts in the account database.
  *
- * @since_tizen 2.3
+ * @since_tizen 2.4
  * @privlevel   public
  * @privilege   %http://tizen.org/privilege/account.read
  * @param[out]  count  The out parameter for count of all accounts
@@ -1318,15 +1233,13 @@ int account_query_capability_by_account_id(capability_cb callback, int account_d
  * @retval  #ACCOUNT_ERROR_DATABASE_BUSY      SQLite handler is busy
  * @retval  #ACCOUNT_ERROR_DB_NOT_OPENED      Account database did not opened
  *
- * @pre  This function requires an open connection to an account service by account_connect() on tizen 2.3.\n
- *       But the account_connect() is not required to use this function since tizen 2.4.
  */
 int account_get_total_count_from_db(int *count);
 
 /**
  * @brief  Updates the sync status of an account with the given account ID.
  *
- * @since_tizen 2.3
+ * @since_tizen 2.4
  * @privlevel   public
  * @privilege   %http://tizen.org/privilege/account.read \n
  *              %http://tizen.org/privilege/account.write
@@ -1345,8 +1258,6 @@ int account_get_total_count_from_db(int *count);
  * @retval  #ACCOUNT_ERROR_DATABASE_BUSY      SQLite handler is busy
  * @retval  #ACCOUNT_ERROR_DB_NOT_OPENED      Account database did not opened
  *
- * @pre  This function requires an open connection to an account service by account_connect() on tizen 2.3.\n
- *       But the account_connect() is not required to use this function since tizen 2.4.
  */
 int account_update_sync_status_by_id(int account_db_id, const account_sync_state_e sync_status);
 
@@ -1357,7 +1268,7 @@ int account_update_sync_status_by_id(int account_db_id, const account_sync_state
 /**
  * @brief  Creates a handle to the account provider.
  *
- * @since_tizen 2.3
+ * @since_tizen 2.4
  * @remarks     You must release @a account_type handle using account_type_destroy().\n
  *
  * @param[in]  account_type  The account provider handle
@@ -1375,7 +1286,7 @@ int account_type_create(account_type_h *account_type);
 /**
  * @brief  Destroys the account provider handle and releases all its resources.
  *
- * @since_tizen 2.3
+ * @since_tizen 2.4
  *
  * @remarks    When you get @a account_type_h using account_type_create(), you must release the handle using account_destroy() to avoid the memory leak.
  *
@@ -1393,7 +1304,7 @@ int account_type_destroy(account_type_h account_type);
 /**
  * @brief  Retrieves capability information with your application ID.
  *
- * @since_tizen 2.3
+ * @since_tizen 2.4
  * @privlevel   public
  * @privilege   %http://tizen.org/privilege/account.read
  * @param[in]   callback   The callback function carries the capability name of an app ID
@@ -1410,15 +1321,13 @@ int account_type_destroy(account_type_h account_type);
  * @retval  #ACCOUNT_ERROR_DATABASE_BUSY      SQLite handler is busy
  * @retval  #ACCOUNT_ERROR_DB_NOT_OPENED      Account database did not opened
  *
- * @pre  This function requires an open connection to an account service by account_connect() on tizen 2.3.\n
- *       But the account_connect() is not required to use this function since tizen 2.4.
  */
 int account_type_query_provider_feature_by_app_id(provider_feature_cb callback, const char* app_id, void *user_data );
 
 /**
  * @brief   Checks whether the given application ID supports the capability.
  *
- * @since_tizen 2.3
+ * @since_tizen 2.4
  * @privlevel   public
  * @privilege   %http://tizen.org/privilege/account.read
  * @remarks     The specific error code can be obtained using the get_last_result() method. Error codes are described in Exception section.
@@ -1438,15 +1347,13 @@ int account_type_query_provider_feature_by_app_id(provider_feature_cb callback, 
  * @excaption #ACCOUNT_ERROR_DATABASE_BUSY      SQLite handler is busy
  * @excaption #ACCOUNT_ERROR_DB_NOT_OPENED      Account database did not opened
  *
- * @pre  This function requires an open connection to an account service by account_connect() on tizen 2.3.\n
- *       But the account_connect() is not required to use this function since tizen 2.4.
  */
 bool account_type_query_supported_feature(const char* app_id, const char* capability);
 
 /**
  * @brief  Gets the application ID of an account provider.
  *
- * @since_tizen 2.3
+ * @since_tizen 2.4
  * @remarks     You must release @a app_id using free().
  *
  * @param[in]   account_type  The account provider handle \n
@@ -1467,7 +1374,7 @@ int account_type_get_app_id(account_type_h account_type, char **app_id);
 /**
  * @brief  Gets the service provider ID of an account provider.
  *
- * @since_tizen 2.3
+ * @since_tizen 2.4
  * @remarks     You must release @a service_provider_id using free().
  *
  * @param[in]   account_type         The account provider handle \n
@@ -1488,7 +1395,7 @@ int account_type_get_service_provider_id(account_type_h account_type, char **ser
 /**
  * @brief  Gets the icon path of an account provider.
  *
- * @since_tizen 2.3
+ * @since_tizen 2.4
  * @remarks     You must release @a icon_path using free().
  *
  * @param[in]   account_type  The account provider handle \n
@@ -1509,7 +1416,7 @@ int account_type_get_icon_path(account_type_h account_type, char **icon_path);
 /**
  * @brief  Gets the small icon path of an account provider.
  *
- * @since_tizen 2.3
+ * @since_tizen 2.4
  * @remarks    You must release @a small_icon_path using free().
  *
  * @param[in]   account_type     The account provider handle\n
@@ -1530,7 +1437,7 @@ int account_type_get_small_icon_path(account_type_h account_type, char **small_i
 /**
  * @brief  Checks whether the given account provider supports multiple accounts.
  *
- * @since_tizen 2.3
+ * @since_tizen 2.4
  * @param[in]   account_type              The account provider handle \n
  *                                        It should be given by account_type_query_* functions or account_type_foreach_account_type_from_db.
  * @param[out]  multiple_account_support  The flag indicating support for multiple accounts accounts\n
@@ -1550,7 +1457,7 @@ int account_type_get_multiple_account_support(account_type_h account_type, int *
 /**
  * @brief  Gets capability information with the given account provider handle.
  *
- * @since_tizen 2.3
+ * @since_tizen 2.4
  * @param[in]   account_type  The account provider handle\n
  *                            It should be given by account_type_query_* functions or account_type_foreach_account_type_from_db().
  * @param[in]   callback      The callback function that carries the capability name of the app ID
@@ -1563,15 +1470,13 @@ int account_type_get_multiple_account_support(account_type_h account_type, int *
  * @retval  #ACCOUNT_ERROR_INVALID_PARAMETER  Invalid parameter
  * @retval  #ACCOUNT_ERROR_DB_FAILED          Database operation failed
  *
- * @pre  This function requires an open connection to an account service by account_connect() on tizen 2.3.\n
- *       But the account_connect() is not required to use this function since tizen 2.4.
  */
 int account_type_get_provider_feature_all(account_type_h account_type, provider_feature_cb callback, void* user_data);
 
 /**
  * @brief  Gets the specific label information detail of an account provider.
  *
- * @since_tizen 2.3
+ * @since_tizen 2.4
  * @param[in]   account_type The account provider handle\n
  *                           It should be given by account_type_query_* functions or account_type_foreach_account_type_from_db().
  * @param[in]   locale       The locale is specified as an ISO 3166 alpha-2 two letter country-code followed by ISO 639-1 for the two-letter language code.\n
@@ -1593,7 +1498,7 @@ int account_type_get_label_by_locale(account_type_h account_type, const char* lo
 /**
  * @brief  Gets the label information detail of an account provider.
  *
- * @since_tizen 2.3
+ * @since_tizen 2.4
  * @param[in]   account_type  The account provider handle\n
  *                            It should be given by account_type_query_* functions or account_type_foreach_account_type_from_db().
  * @param[in]   callback      The callback function carrying the label information
@@ -1612,7 +1517,7 @@ int account_type_get_label(account_type_h account_type, account_label_cb callbac
 /**
  * @brief  Retrieves the label information with your application ID.
  *
- * @since_tizen 2.3
+ * @since_tizen 2.4
  * @privlevel   public
  * @privilege   %http://tizen.org/privilege/account.read
  * @param[in]   callback    The callback function that carries label_h for label information \n
@@ -1630,9 +1535,6 @@ int account_type_get_label(account_type_h account_type, account_label_cb callbac
  * @retval  #ACCOUNT_ERROR_DATABASE_BUSY      SQLite handler is busy
  * @retval  #ACCOUNT_ERROR_DB_NOT_OPENED      Account database did not opened
  *
- * @pre  This function requires an open connection to an account service by account_connect() on tizen 2.3.\n
- *       But the account_connect() is not required to use this function since tizen 2.4.
- *
  * @see account_type_query_by_app_id()
  * @see account_type_foreach_account_type_from_db()
  */
@@ -1641,7 +1543,7 @@ int account_type_query_label_by_app_id(account_label_cb callback, const char* ap
 /**
  * @brief  Retrieves the account provider information with your application ID.
  *
- * @since_tizen 2.3
+ * @since_tizen 2.4
  * @privlevel   public
  * @privilege   %http://tizen.org/privilege/account.read
  * @param[in]   app_id        The application ID to search
@@ -1657,9 +1559,6 @@ int account_type_query_label_by_app_id(account_label_cb callback, const char* ap
  * @retval  #ACCOUNT_ERROR_DATABASE_BUSY      SQLite handler is busy
  * @retval  #ACCOUNT_ERROR_DB_NOT_OPENED      Account database did not opened
  *
- * @pre  This function requires an open connection to an account service by account_connect() on tizen 2.3.\n
- *       But the account_connect() is not required to use this function since tizen 2.4.
- *
  * @see account_type_create()
  * @see account_type_get_app_id()
  * @see account_type_get_service_provider_id()
@@ -1674,7 +1573,7 @@ int account_type_query_by_app_id(const char* app_id, account_type_h *account_typ
 /**
  * @brief  Retrieves all account priovider information.
  *
- * @since_tizen 2.3
+ * @since_tizen 2.4
  * @privlevel   public
  * @privilege   %http://tizen.org/privilege/account.read
  * @param[in]   callback   The account provider information \n
@@ -1691,9 +1590,6 @@ int account_type_query_by_app_id(const char* app_id, account_type_h *account_typ
  * @retval  #ACCOUNT_ERROR_DATABASE_BUSY      SQLite handler is busy
  * @retval  #ACCOUNT_ERROR_DB_NOT_OPENED      Account database did not opened
  *
- * @pre  This function requires an open connection to an account service by account_connect() on tizen 2.3.\n
- *       But the account_connect() is not required to use this function since tizen 2.4.
- *
  * @see account_type_create()
  * @see account_type_get_app_id()
  * @see account_type_get_service_provider_id()
@@ -1708,7 +1604,7 @@ int account_type_foreach_account_type_from_db(account_type_cb callback, void *us
 /**
  * @brief  Retrieves the label information with the given application ID and locale.
  *
- * @since_tizen 2.3
+ * @since_tizen 2.4
  * @privlevel   public
  * @privilege   %http://tizen.org/privilege/account.read
  * @param[in]   app_id  The application ID
@@ -1726,15 +1622,13 @@ int account_type_foreach_account_type_from_db(account_type_cb callback, void *us
  * @retval  #ACCOUNT_ERROR_DATABASE_BUSY      SQLite handler is busy
  * @retval  #ACCOUNT_ERROR_DB_NOT_OPENED      Account database did not opened
  *
- * @pre  This function requires an open connection to an account service by account_connect() on tizen 2.3.\n
- *       But the account_connect() is not required to use this function since tizen 2.4.
  */
 int account_type_query_label_by_locale(const char* app_id, const char* locale, char** label);
 
 /**
  * @brief  Retrieves account provider information with the capability name.
  *
- * @since_tizen 2.3
+ * @since_tizen 2.4
  * @privlevel   public
  * @privilege   %http://tizen.org/privilege/account.read
  * @param[in]   callback        The callback function to retrieve account provider information
@@ -1752,15 +1646,13 @@ int account_type_query_label_by_locale(const char* app_id, const char* locale, c
  * @retval  #ACCOUNT_ERROR_DATABASE_BUSY      SQLite handler is busy
  * @retval  #ACCOUNT_ERROR_DB_NOT_OPENED      Account database did not opened
  *
- * @pre  This function requires an open connection to an account service by account_connect() on tizen 2.3.\n
- *       But the account_connect() is not required to use this function since tizen 2.4.
  */
 int account_type_query_by_provider_feature(account_type_cb callback, const char* key, void* user_data);
 
 /**
  * @brief  Checks whether the given app_id exists in the account provider DB.
  *
- * @since_tizen 2.3
+ * @since_tizen 2.4
  * @privlevel   public
  * @privilege   %http://tizen.org/privilege/account.read
  * @param[in]   app_id  The application ID to check
@@ -1775,9 +1667,6 @@ int account_type_query_by_provider_feature(account_type_cb callback, const char*
  * @retval  #ACCOUNT_ERROR_DATABASE_BUSY      SQLite handler is busy
  * @retval  #ACCOUNT_ERROR_DB_NOT_OPENED      Account database did not opened
  *
- * @pre  This function requires an open connection to an account service by account_connect() on tizen 2.3.\n
- *       But the account_connect() is not required to use this function since tizen 2.4.
- *
  * @see account_type_query_by_app_id()
  */
 int account_type_query_app_id_exist(const char* app_id);
@@ -1789,7 +1678,7 @@ int account_type_query_app_id_exist(const char* app_id);
 /**
  * @brief  Creates a handle for the account event subscription.
  *
- * @since_tizen 2.3
+ * @since_tizen 2.4
  * @remarks     You must release @a account_subscribe handle using account_unsubscribe_notification().
  *
  * @param[in]   account_subscribe  The account subscription handle
@@ -1808,7 +1697,7 @@ int account_subscribe_create(account_subscribe_h* account_subscribe);
 /**
  * @brief  Starts to subscribe account event through the given callback function.
  *
- * @since_tizen 2.3
+ * @since_tizen 2.4
  * @privlevel   public
  * @privilege   %http://tizen.org/privilege/account.read \n
  * @param[in]   account_subscribe  The account subscription handle
@@ -1832,7 +1721,7 @@ int account_subscribe_notification(account_subscribe_h account_subscribe, accoun
 /**
  * @brief  Destroys the account subscribe handle and releases all its resources.
  *
- * @since_tizen 2.3
+ * @since_tizen 2.4
  * @privlevel   public
  * @privilege   %http://tizen.org/privilege/account.read \n
  * @remarks     You must call @a account_unsubscribe_notification when you do not need to subscribe account event.

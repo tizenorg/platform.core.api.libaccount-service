@@ -31,7 +31,12 @@
 #include <account_ipc_marshal.h>
 #include <account-mgr-stub.h>
 
-#include "account.h"
+#ifdef TIZEN_PROFILE_MOBILE
+#include "mobile/account.h"
+#else
+#include "wearable/account.h"
+#endif
+
 #include "account-error.h"
 #include "account-types.h"
 #include "account_internal.h"
@@ -50,6 +55,10 @@ static int _account_glist_free(GList* list);
 
 static int _account_free_capability_items(account_capability_s *data)
 {
+	if(!data) {
+		return ACCOUNT_ERROR_INVALID_PARAMETER;
+	}
+
 	_ACCOUNT_FREE(data->type);
 	_ACCOUNT_FREE(data->package_name);
 	_ACCOUNT_FREE(data->user_name);
@@ -57,11 +66,35 @@ static int _account_free_capability_items(account_capability_s *data)
 	return ACCOUNT_ERROR_NONE;
 }
 
-static int _account_custom_item_free(account_custom_s *data)
+static int _account_free_custom_items(account_custom_s *data)
 {
+	if(!data) {
+		return ACCOUNT_ERROR_INVALID_PARAMETER;
+	}
+
 	_ACCOUNT_FREE(data->app_id);
 	_ACCOUNT_FREE(data->key);
 	_ACCOUNT_FREE(data->value);
+
+	return ACCOUNT_ERROR_NONE;
+}
+
+static int _account_capability_gslist_free(GSList* list)
+{
+	if(!list){
+		return ACCOUNT_ERROR_INVALID_PARAMETER;
+	}
+
+	GSList* iter;
+
+	for (iter = list; iter != NULL; iter = g_slist_next(iter)) {
+		account_capability_s *capability_data = (account_capability_s*)iter->data;
+		_account_free_capability_items(capability_data);
+		_ACCOUNT_FREE(capability_data);
+	}
+
+	g_slist_free(list);
+	list = NULL;
 
 	return ACCOUNT_ERROR_NONE;
 }
@@ -76,7 +109,7 @@ static int _account_custom_gslist_free(GSList* list)
 
 	for (iter = list; iter != NULL; iter = g_slist_next(iter)) {
 		account_custom_s *custom_data = (account_custom_s*)iter->data;
-		_account_custom_item_free(custom_data);
+		_account_free_custom_items(custom_data);
 		_ACCOUNT_FREE(custom_data);
 	}
 
@@ -101,6 +134,10 @@ static int _account_list_free(GList* list)
 
 static int _account_free_account_items(account_s *data)
 {
+	if(!data) {
+		return ACCOUNT_ERROR_INVALID_PARAMETER;
+	}
+
 	_ACCOUNT_FREE(data->user_name);
 	_ACCOUNT_FREE(data->email_address);
 	_ACCOUNT_FREE(data->display_name);
@@ -114,11 +151,9 @@ static int _account_free_account_items(account_s *data)
 	for(i=0;i<USER_TXT_CNT;i++)
 		_ACCOUNT_FREE(data->user_data_txt[i]);
 
-	_account_gslist_free(data->capablity_list);
+	_account_capability_gslist_free(data->capablity_list);
 	_account_glist_free(data->account_list);
 	_account_custom_gslist_free(data->custom_list);
-//	_account_list_free(data->domain_list);
-//	_account_list_free(data->mechanism_list);
 
 	return ACCOUNT_ERROR_NONE;
 }
@@ -132,9 +167,9 @@ static int _account_gslist_free(GSList* list)
 	GSList* iter;
 
 	for (iter = list; iter != NULL; iter = g_slist_next(iter)) {
-		account_capability_s *cap_data = (account_capability_s*)iter->data;
-		_account_free_capability_items(cap_data);
-		_ACCOUNT_FREE(cap_data);
+		account_s *account_record = (account_s*)iter->data;
+		_account_free_account_items(account_record);
+		_ACCOUNT_FREE(account_record);
 	}
 
 	g_slist_free(list);
@@ -263,6 +298,7 @@ static int _account_get_error_code(bool is_success, GError *error)
 	return ACCOUNT_ERROR_NONE;
 }
 
+#ifdef TIZEN_PROFILE_MOBILE
 ACCOUNT_API int account_connect(void)
 {
 	return ACCOUNT_ERROR_NONE;
@@ -277,6 +313,7 @@ ACCOUNT_API int account_disconnect(void)
 {
 	return ACCOUNT_ERROR_NONE;
 }
+#endif
 
 
 ACCOUNT_API int account_insert_to_db(account_h account, int *account_db_id)
@@ -403,9 +440,11 @@ ACCOUNT_API int account_delete_from_db_by_user_name(char *user_name, char *packa
 	{
 		error_code = _account_get_error_code(is_success, error);
 		_ERR("account_manager_call_account_delete_from_db_by_user_name_sync failed [%d]", error_code);
+		_account_gslist_free(account_list);
 		return error_code;
 	}
 
+	_account_gslist_free(account_list);
 	return ACCOUNT_ERROR_NONE;
 }
 
@@ -1269,20 +1308,16 @@ ACCOUNT_API int account_get_capability(account_h account, const char* capability
 	GSList *iter;
 	account_s *data = (account_s*)account;
 
-	_ERR("before for()");
 	for (iter = data->capablity_list; iter != NULL; iter = g_slist_next(iter)) {
 		account_capability_s *cap_data = NULL;
 
 		cap_data = (account_capability_s*)iter->data;
 
-	_ERR("capability_type = %s, data->type = %s", capability_type, cap_data->type);
-	_ERR("capability_value = %d, data->value= %d", capability_value, cap_data->value);
 		if(!strcmp(capability_type, cap_data->type)) {
 			*capability_value = cap_data->value;
 			return ACCOUNT_ERROR_NONE;
 		}
 	}
-	_ERR("after for()");
 
 	return ACCOUNT_ERROR_RECORD_NOT_FOUND;
 }
@@ -1317,14 +1352,10 @@ ACCOUNT_API int account_get_custom(account_h account, const char* key, char** va
 	GSList *iter;
 	account_s *data = (account_s*)account;
 
-	_ERR("before for()");
 	for (iter = data->custom_list; iter != NULL; iter = g_slist_next(iter)) {
 		account_custom_s *custom_data = NULL;
 
 		custom_data = (account_custom_s*)iter->data;
-
-		_ERR("key = %s, custom_data->key = %s", key, custom_data->key);
-		_ERR("value = %s, custom_data->value = %s", value, custom_data->value);
 
 		if(!strcmp(key, custom_data->key)) {
 			(*value) = NULL;
@@ -1332,7 +1363,6 @@ ACCOUNT_API int account_get_custom(account_h account, const char* key, char** va
 			return ACCOUNT_ERROR_NONE;
 		}
 	}
-	_ERR("after for()");
 
 	return ACCOUNT_ERROR_RECORD_NOT_FOUND;
 }
@@ -1407,6 +1437,7 @@ ACCOUNT_API int account_foreach_account_from_db(account_cb callback, void *user_
 	}
 	_INFO("account_foreach_account_from_db end");
 
+	_account_gslist_free(account_list);
 	return ACCOUNT_ERROR_NONE;
 }
 
@@ -1447,7 +1478,12 @@ ACCOUNT_API int account_query_account_by_account_id(int account_db_id, account_h
 		return ACCOUNT_ERROR_DB_FAILED;
 	}
 
-	*account = (account_h) account_data;
+	account_s **input = (account_s **)account;
+
+	_account_free_account_items(*input);
+	_ACCOUNT_FREE(*input);
+
+	*input = account_data;
 
 	_INFO("account_query_account_by_account_id end");
 
@@ -1503,6 +1539,7 @@ ACCOUNT_API int account_query_account_by_user_name(account_cb callback, const ch
 	}
 	_INFO("account_query_account_by_user_name end");
 
+	_account_gslist_free(account_list);
 	return ACCOUNT_ERROR_NONE;
 }
 
@@ -1554,6 +1591,7 @@ ACCOUNT_API int account_query_account_by_package_name(account_cb callback, const
 			break;
 		}
 	}
+	_account_gslist_free(account_list);
 	_INFO("account_query_account_by_package_name end");
 	return ACCOUNT_ERROR_NONE;
 }
@@ -1612,6 +1650,7 @@ ACCOUNT_API int account_query_account_by_capability(account_cb callback, const c
 			break;
 		}
 	}
+	_account_gslist_free(account_list);
 	_INFO("account_query_account_by_capability end");
 	return ACCOUNT_ERROR_NONE;
 }
@@ -1664,6 +1703,7 @@ ACCOUNT_API int account_query_account_by_capability_type(account_cb callback, co
 			break;
 		}
 	}
+	_account_gslist_free(account_list);
 	_INFO("account_query_account_by_capability end");
 	return ACCOUNT_ERROR_NONE;
 }
@@ -1716,6 +1756,8 @@ ACCOUNT_API int account_query_capability_by_account_id(capability_cb callback, i
 		}
 		_INFO("");
 	}
+
+	_account_capability_gslist_free(capability_list);
 	_INFO("account_query_capability_by_account_id end");
 	return ACCOUNT_ERROR_NONE;
 }
@@ -1766,7 +1808,7 @@ ACCOUNT_API int account_get_total_count_from_db(int *count)
 	return _account_get_total_count(count, true);
 }
 
-ACCOUNT_API int account_get_total_count_from_db_ex(int *count)
+ACCOUNT_INTERNAL_API int account_get_total_count_from_db_ex(int *count)
 {
 	_INFO("account_get_total_count_from_db_ex starting");
 
@@ -1800,6 +1842,10 @@ ACCOUNT_API int account_update_sync_status_by_id(int account_db_id, const accoun
 
 static int _account_type_free_label_items(label_s *data)
 {
+	if(!data) {
+		return ACCOUNT_ERROR_INVALID_PARAMETER;
+	}
+
 	_ACCOUNT_FREE(data->app_id);
 	_ACCOUNT_FREE(data->label);
 	_ACCOUNT_FREE(data->locale);
@@ -1807,7 +1853,7 @@ static int _account_type_free_label_items(label_s *data)
 	return ACCOUNT_ERROR_NONE;
 }
 
-static int _account_type_gslist_free(GSList* list)
+static int _account_type_label_gslist_free(GSList* list)
 {
 	ACCOUNT_RETURN_VAL((list != NULL), {}, ACCOUNT_ERROR_INVALID_PARAMETER, ("GSlist is NULL"));
 
@@ -1825,15 +1871,72 @@ static int _account_type_gslist_free(GSList* list)
 	return ACCOUNT_ERROR_NONE;
 }
 
-static int _account_type_item_free(account_type_s *data)
+static int _account_type_free_provider_feature_items(provider_feature_s *data)
 {
+	if(!data) {
+		return ACCOUNT_ERROR_INVALID_PARAMETER;
+	}
+
+	_ACCOUNT_FREE(data->key);
+	_ACCOUNT_FREE(data->app_id);
+
+	return ACCOUNT_ERROR_NONE;
+}
+
+static int _account_type_provider_feature_gslist_free(GSList* list)
+{
+	ACCOUNT_RETURN_VAL((list != NULL), {}, ACCOUNT_ERROR_INVALID_PARAMETER, ("GSlist is NULL"));
+
+	GSList* iter;
+
+	for (iter = list; iter != NULL; iter = g_slist_next(iter)) {
+		provider_feature_s *feature_data = (provider_feature_s*)iter->data;
+		_account_type_free_provider_feature_items(feature_data);
+		_ACCOUNT_FREE(feature_data);
+	}
+
+	g_slist_free(list);
+	list = NULL;
+
+	return ACCOUNT_ERROR_NONE;
+}
+
+static int _account_type_free_account_type_items(account_type_s *data)
+{
+	if(!data) {
+		return ACCOUNT_ERROR_INVALID_PARAMETER;
+	}
+
 	_ACCOUNT_FREE(data->app_id);
 	_ACCOUNT_FREE(data->service_provider_id);
 	_ACCOUNT_FREE(data->icon_path);
 	_ACCOUNT_FREE(data->small_icon_path);
 
+	_account_type_label_gslist_free(data->label_list);
+	_account_type_provider_feature_gslist_free(data->provider_feature_list);
+//	_account_type_glist_free(data->account_type_list);
+
 	return ACCOUNT_ERROR_NONE;
 }
+
+static int _account_type_gslist_free(GSList* list)
+{
+	ACCOUNT_RETURN_VAL((list != NULL), {}, ACCOUNT_ERROR_INVALID_PARAMETER, ("Glist is NULL"));
+
+	GSList* iter;
+
+	for (iter = list; iter != NULL; iter = g_slist_next(iter)) {
+		account_type_s *account_type_record = (account_type_s*)iter->data;
+		_account_type_free_account_type_items(account_type_record);
+		_ACCOUNT_FREE(account_type_record);
+	}
+
+	g_slist_free(list);
+	list = NULL;
+
+	return ACCOUNT_ERROR_NONE;
+}
+
 /*
 static int _account_type_glist_free(GList* list)
 {
@@ -1843,7 +1946,7 @@ static int _account_type_glist_free(GList* list)
 
 	for (iter = list; iter != NULL; iter = g_list_next(iter)) {
 		account_type_s *account_type_record = (account_type_s*)iter->data;
-		_account_type_item_free(account_type_record);
+		_account_type_free_account_type_items(account_type_record);
 		_ACCOUNT_FREE(account_type_record);
 	}
 
@@ -1853,16 +1956,6 @@ static int _account_type_glist_free(GList* list)
 	return ACCOUNT_ERROR_NONE;
 }
 */
-static int _account_type_free_account_type_items(account_type_s *data)
-{
-	_account_type_item_free(data);
-
-	_account_type_gslist_free(data->label_list);
-//	_account_type_gslist_free(data->provider_feature_list);
-//	_account_type_glist_free(data->account_type_list);
-
-	return ACCOUNT_ERROR_NONE;
-}
 
 ACCOUNT_API int account_type_create(account_type_h *account_type)
 {
@@ -2111,6 +2204,7 @@ ACCOUNT_API int account_type_query_provider_feature_by_app_id(provider_feature_c
 		}
 	}
 
+	_account_type_provider_feature_gslist_free(provider_feature_list);
 	_INFO("account_type_query_provider_feature_by_app_id end");
 	return error_code;
 }
@@ -2467,6 +2561,8 @@ ACCOUNT_API int account_type_query_label_by_app_id(account_label_cb callback, co
 		}
 		_INFO("");
 	}
+
+	_account_type_label_gslist_free(label_list);
 	_INFO("account_type_query_label_by_app_id end");
 	return ACCOUNT_ERROR_NONE;
 }
@@ -2504,15 +2600,14 @@ ACCOUNT_API int account_type_query_by_app_id(const char* app_id, account_type_h 
 	ACCOUNT_RETURN_VAL((received_account_type != NULL), {}, ACCOUNT_ERROR_DB_FAILED, ("INVALID DATA RECEIVED FROM SVC"));
 
 	in_data->id = received_account_type->id;
-	in_data->app_id = _account_get_text(received_account_type->app_id);
-	in_data->service_provider_id = _account_get_text(received_account_type->service_provider_id);
-	in_data->icon_path = _account_get_text(received_account_type->icon_path);
-	in_data->small_icon_path = _account_get_text(received_account_type->small_icon_path);
+	in_data->app_id = received_account_type->app_id;
+	in_data->service_provider_id = received_account_type->service_provider_id;
+	in_data->icon_path = received_account_type->icon_path;
+	in_data->small_icon_path = received_account_type->small_icon_path;
 	in_data->multiple_account_support = received_account_type->multiple_account_support;
 	in_data->label_list = received_account_type->label_list;
 	in_data->provider_feature_list = received_account_type->provider_feature_list;
 
-	_account_type_item_free(received_account_type);
 	_ACCOUNT_FREE(received_account_type);
 	_INFO("account_type_query_by_app_id end");
 	return ACCOUNT_ERROR_NONE;
@@ -2567,6 +2662,8 @@ ACCOUNT_API int account_type_foreach_account_type_from_db(account_type_cb callba
 			break;
 		}
 	}
+
+	_account_type_gslist_free(account_type_list);
 	_INFO("account_type_foreach_account_type_from_db end");
 	return ACCOUNT_ERROR_NONE;
 }
@@ -2660,6 +2757,8 @@ ACCOUNT_API int account_type_query_by_provider_feature(account_type_cb callback,
 		}
 		_INFO("");
 	}
+
+	_account_type_gslist_free(account_type_list);
 	_INFO("account_type_query_by_provider_feature end");
 	return ACCOUNT_ERROR_NONE;
 }

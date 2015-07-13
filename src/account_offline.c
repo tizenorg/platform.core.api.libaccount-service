@@ -25,10 +25,15 @@
 #include <vconf.h>
 #include <unistd.h>
 
-#include "account.h"
 #include "account-private.h"
 #include "account_internal.h"
 #include "dbg.h"
+
+#ifdef TIZEN_PROFILE_MOBILE
+#include "mobile/account.h"
+#else
+#include "wearable/account.h"
+#endif
 
 #define ACCOUNT_DB_OPEN_READONLY 0
 #define ACCOUNT_DB_OPEN_READWRITE 1
