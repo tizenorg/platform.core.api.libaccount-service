@@ -22,8 +22,8 @@
 #ifndef __ACCOUNT_INTERNAL_H__
 #define __ACCOUNT_INTERNAL_H__
 
-#include <account-types.h>
-#include <account.h>
+#include "account-types.h"
+#include "account.h"
 
 #ifdef __cplusplus
 extern "C"

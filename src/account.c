@@ -230,6 +230,15 @@ _account_manager_get_instance ()
 
 	_INFO("after g_bus_get_sync");
 
+	if (!connection) {
+		if (error) {
+			_ERR("Unable to connect to gdbus: %s", error->message);
+			g_clear_error(&error);
+		}
+		return NULL;
+	}
+
+	g_clear_error(&error);
 
 	/* Create the object */
 	_acc_mgr =
@@ -239,6 +248,18 @@ _account_manager_get_instance ()
 										"/org/tizen/account/manager",
 										NULL,
 										 &error);
+
+	if (!_acc_mgr) {
+		if (error) {
+			_ERR("Unable account_manager_proxy_new_sync: %s", error->message);
+			g_clear_error(&error);
+		}
+		if(connection)
+			g_object_unref(connection);
+		return NULL;
+	}
+
+	g_clear_error(&error);
 	_INFO("_account_manager_get_instance end");
 	return _acc_mgr;
 }
@@ -337,6 +358,7 @@ ACCOUNT_API int account_insert_to_db(account_h account, int *account_db_id)
 	_INFO("3. Before account_manager_call_account_add_sync");
 	bool is_success = account_manager_call_account_add_sync(acc_mgr, account_serialized, &db_id, NULL, &error);
 	ACCOUNT_CATCH_ERROR((is_success != false), {}, _account_get_error_code(is_success, error), "Failed to get dbus.");
+	g_clear_error(&error);
 
 	*account_db_id = db_id;
 	account_data->id = db_id;
@@ -346,6 +368,7 @@ ACCOUNT_API int account_insert_to_db(account_h account, int *account_db_id)
 	return ACCOUNT_ERROR_NONE;
 
 CATCH:
+	g_clear_error(&error);
 	//Failed to get dbus.
 	_ERR("account_manager_call_account_add_sync()=[%d]", error_code);
 
@@ -375,9 +398,11 @@ ACCOUNT_API int account_delete_from_db_by_id(int account_db_id)
 	if (!is_success)
 	{
 		error_code = _account_get_error_code(is_success, error);
+		g_clear_error(&error);
 		_ERR("account_manager_call_account_query_account_by_account_id_sync failed [%d]", error_code);
 		return error_code;
 	}
+	g_clear_error(&error);
 
 	_INFO("3. Before account_manager_call_account_delete_from_db_by_id_sync");
 	is_success = account_manager_call_account_delete_from_db_by_id_sync(acc_mgr, account_db_id, NULL, &error);
@@ -386,8 +411,10 @@ ACCOUNT_API int account_delete_from_db_by_id(int account_db_id)
 	{
 		error_code = _account_get_error_code(is_success, error);
 		_ERR("account_manager_call_account_delete_from_db_by_id_sync failed [%d]", error_code);
+		g_clear_error(&error);
 		return error_code;
 	}
+	g_clear_error(&error);
 
 	_INFO("4. Before account_delete_from_db_by_id end");
 	return ACCOUNT_ERROR_NONE;
@@ -415,15 +442,16 @@ ACCOUNT_API int account_delete_from_db_by_user_name(char *user_name, char *packa
 	bool is_success = account_manager_call_account_query_account_by_user_name_sync(acc_mgr, user_name, &account_list_variant, NULL, &error);
 
 	error_code = _account_get_error_code(is_success, error);
+	g_clear_error(&error);
 	if (error_code != ACCOUNT_ERROR_NONE)
 	{
 		_ERR("account_query_account_by_user_name error=[%d]", error_code);
 		return error_code;
 	}
 
-	_INFO("before unmarshal_account_list");
 	GSList* account_list = unmarshal_account_list(account_list_variant);
-	_INFO("after unmarshal_account_list");
+	g_variant_unref(account_list_variant);
+
 	if (account_list == NULL)
 	{
 		return ACCOUNT_ERROR_NO_DATA;
@@ -436,10 +464,12 @@ ACCOUNT_API int account_delete_from_db_by_user_name(char *user_name, char *packa
 	if (!is_success)
 	{
 		error_code = _account_get_error_code(is_success, error);
+		g_clear_error(&error);
 		_ERR("account_manager_call_account_delete_from_db_by_user_name_sync failed [%d]", error_code);
 		_account_gslist_free(account_list);
 		return error_code;
 	}
+	g_clear_error(&error);
 
 	_account_gslist_free(account_list);
 	return ACCOUNT_ERROR_NONE;
@@ -484,16 +514,18 @@ int _account_delete_from_db_by_package_name(const char *package_name, bool permi
 	if (!is_success)
 	{
 		error_code = _account_get_error_code(is_success, error);
+		g_clear_error(&error);
 		_ERR("account_manager_call_account_delete_from_db_by_package_name_sync failed [%d]", error_code);
 		return error_code;
 	}
+	g_clear_error(&error);
 
 	return ACCOUNT_ERROR_NONE;
 }
 
 ACCOUNT_API int account_delete_from_db_by_package_name(const char *package_name)
 {
-	_INFO("account_delete_from_db_by_package_name start");
+	_INFO("account_delete_from_db_by_package_name starting with permission");
 	return _account_delete_from_db_by_package_name(package_name, true);
 }
 
@@ -528,9 +560,11 @@ ACCOUNT_API int account_update_to_db_by_id(account_h account, int account_id)
 	if (!is_success)
 	{
 		error_code = _account_get_error_code(is_success, error);
+		g_clear_error(&error);
 		_ERR("account_manager_call_account_query_account_by_account_id_sync failed [%d]", error_code);
 		return error_code;
 	}
+	g_clear_error(&error);
 
 	_INFO("3. Before account_manager_call_account_update_to_db_by_id_sync");
 	GVariant* account_serialized = marshal_account((account_s*) account);
@@ -539,9 +573,11 @@ ACCOUNT_API int account_update_to_db_by_id(account_h account, int account_id)
 	if (!is_success)
 	{
 		error_code = _account_get_error_code(is_success, error);
+		g_clear_error(&error);
 		_ERR("account_manager_call_account_update_to_db_by_id_sync failed [%d]", error_code);
 		return error_code;
 	}
+	g_clear_error(&error);
 
 	_INFO("4. account_update_to_db_by_id end");
 	return ACCOUNT_ERROR_NONE;
@@ -582,9 +618,11 @@ ACCOUNT_INTERNAL_API int account_update_to_db_by_id_without_permission(account_h
 	if (!is_success)
 	{
 		error_code = _account_get_error_code(is_success, error);
+		g_clear_error(&error);
 		_ERR("account_manager_call_account_query_account_by_account_id_sync failed [%d]", error_code);
 		return error_code;
 	}
+	g_clear_error(&error);
 
 	_INFO("before marshal() : account_id[%d], user_name=%s", account_id, ((account_s*)account)->user_name);
 	GVariant* account_serialized = marshal_account((account_s*) account);
@@ -602,9 +640,11 @@ ACCOUNT_INTERNAL_API int account_update_to_db_by_id_without_permission(account_h
 	if (!is_success)
 	{
 		error_code = _account_get_error_code(is_success, error);
+		g_clear_error(&error);
 		_ERR("account_manager_call_account_update_to_db_by_id_ex_sync failed [%d]", error_code);
 		return error_code;
 	}
+	g_clear_error(&error);
 
 	return ACCOUNT_ERROR_NONE;
 }
@@ -635,9 +675,11 @@ ACCOUNT_API int account_update_to_db_by_user_name(account_h account, const char 
 	if (!is_success)
 	{
 		error_code = _account_get_error_code(is_success, error);
+		g_clear_error(&error);
 		_ERR("account_manager_call_account_query_account_by_account_id_sync failed [%d]", error_code);
 		return error_code;
 	}
+	g_clear_error(&error);
 
 	GVariant* account_serialized = marshal_account(account_data);
 	is_success = account_manager_call_account_update_to_db_by_user_name_sync(acc_mgr, account_serialized, user_name, package_name, NULL, &error);
@@ -645,9 +687,11 @@ ACCOUNT_API int account_update_to_db_by_user_name(account_h account, const char 
 	if (!is_success)
 	{
 		error_code = _account_get_error_code(is_success, error);
+		g_clear_error(&error);
 		_ERR("account_manager_call_account_update_to_db_by_user_name_sync failed [%d]", error_code);
 		return error_code;
 	}
+	g_clear_error(&error);
 
 	return ACCOUNT_ERROR_NONE;
 }
@@ -1402,14 +1446,16 @@ ACCOUNT_API int account_foreach_account_from_db(account_cb callback, void *user_
 	bool is_success = account_manager_call_account_query_all_sync(acc_mgr, &account_list_variant, NULL, &error);
 
 	int error_code = _account_get_error_code(is_success, error);
+	g_clear_error(&error);
+
 	if (error_code != ACCOUNT_ERROR_NONE)
 	{
 		return error_code;
 	}
 
-	_INFO("before unmarshal_account_list");
 	GSList* account_list = unmarshal_account_list(account_list_variant);
-	_INFO("after unmarshal_account_list");
+	g_variant_unref(account_list_variant);
+
 	GSList* iter;
 
 	for (iter = account_list; iter != NULL; iter = g_slist_next(iter))
@@ -1427,9 +1473,9 @@ ACCOUNT_API int account_foreach_account_from_db(account_cb callback, void *user_
 		}
 		_INFO("After one iteration callback");
 	}
-	_INFO("account_foreach_account_from_db end");
-
 	_account_gslist_free(account_list);
+
+	_INFO("account_foreach_account_from_db end");
 	return ACCOUNT_ERROR_NONE;
 }
 
@@ -1454,6 +1500,7 @@ ACCOUNT_API int account_query_account_by_account_id(int account_db_id, account_h
 	bool is_success = account_manager_call_account_query_account_by_account_id_sync(acc_mgr, account_db_id, &account_variant, NULL, &error);
 
 	int error_code = _account_get_error_code(is_success, error);
+	g_clear_error(&error);
 	if (error_code != ACCOUNT_ERROR_NONE)
 	{
 		return error_code;
@@ -1501,14 +1548,15 @@ ACCOUNT_API int account_query_account_by_user_name(account_cb callback, const ch
 	bool is_success = account_manager_call_account_query_account_by_user_name_sync(acc_mgr, user_name, &account_list_variant, NULL, &error);
 
 	int error_code = _account_get_error_code(is_success, error);
+	g_clear_error(&error);
 	if (error_code != ACCOUNT_ERROR_NONE)
 	{
 		return error_code;
 	}
 
-	_INFO("before unmarshal_account_list");
 	GSList* account_list = unmarshal_account_list(account_list_variant);
-	_INFO("after unmarshal_account_list");
+	g_variant_unref(account_list_variant);
+
 	if (account_list == NULL)
 	{
 		return ACCOUNT_ERROR_NO_DATA;
@@ -1553,14 +1601,15 @@ ACCOUNT_API int account_query_account_by_package_name(account_cb callback, const
 	bool is_success = account_manager_call_account_query_account_by_package_name_sync(acc_mgr, package_name, &account_list_variant, NULL, &error);
 
 	int error_code = _account_get_error_code(is_success, error);
+	g_clear_error(&error);
 	if (error_code != ACCOUNT_ERROR_NONE)
 	{
 		return error_code;
 	}
 
-	_INFO("before unmarshal_account_list");
 	GSList* account_list = unmarshal_account_list(account_list_variant);
-	_INFO("after unmarshal_account_list");
+	g_variant_unref(account_list_variant);
+
 	if (account_list == NULL)
 	{
 		return ACCOUNT_ERROR_NO_DATA;
@@ -1611,14 +1660,14 @@ ACCOUNT_API int account_query_account_by_capability(account_cb callback, const c
 	bool is_success = account_manager_call_account_query_account_by_capability_sync(acc_mgr, capability_type, capability_value, &account_list_variant, NULL, &error);
 
 	int error_code = _account_get_error_code(is_success, error);
+	g_clear_error(&error);
 	if (error_code != ACCOUNT_ERROR_NONE)
 	{
 		return error_code;
 	}
 
-	_INFO("before unmarshal_account_list");
 	GSList* account_list = unmarshal_account_list(account_list_variant);
-	_INFO("after unmarshal_account_list");
+	g_variant_unref(account_list_variant);
 	if (account_list == NULL)
 	{
 		return ACCOUNT_ERROR_NO_DATA;
@@ -1663,14 +1712,15 @@ ACCOUNT_API int account_query_account_by_capability_type(account_cb callback, co
 	bool is_success = account_manager_call_account_query_account_by_capability_type_sync(acc_mgr, capability_type, &account_list_variant, NULL, &error);
 
 	int error_code = _account_get_error_code(is_success, error);
+	g_clear_error(&error);
 	if (error_code != ACCOUNT_ERROR_NONE)
 	{
 		return error_code;
 	}
 
-	_INFO("before unmarshal_account_list");
 	GSList* account_list = unmarshal_account_list(account_list_variant);
-	_INFO("after unmarshal_account_list");
+	g_variant_unref(account_list_variant);
+
 	if (account_list == NULL)
 	{
 		return ACCOUNT_ERROR_NO_DATA;
@@ -1714,6 +1764,7 @@ ACCOUNT_API int account_query_capability_by_account_id(capability_cb callback, i
 	bool is_success = account_manager_call_account_query_capability_by_account_id_sync(acc_mgr, account_id, &capability_list_variant, NULL, &error);
 
 	int error_code = _account_get_error_code(is_success, error);
+	g_clear_error(&error);
 	if (error_code != ACCOUNT_ERROR_NONE)
 	{
 		return error_code;
@@ -1776,6 +1827,7 @@ static int _account_get_total_count(int *count, bool include_hidden)
 	int temp_count = -1;
 	bool is_success = account_manager_call_account_get_total_count_from_db_sync(acc_mgr, include_hidden, &temp_count, NULL, &error);
 	int error_code = _account_get_error_code(is_success, error);
+	g_clear_error(&error);
 	if (error_code != ACCOUNT_ERROR_NONE)
 	{
 		return error_code;
@@ -1803,6 +1855,7 @@ ACCOUNT_INTERNAL_API int account_get_total_count_from_db_ex(int *count)
 ACCOUNT_API int account_update_sync_status_by_id(int account_db_id, const account_sync_state_e sync_status)
 {
 	_INFO("account_update_sync_status_by_id starting");
+	int error_code = ACCOUNT_ERROR_NONE;
 
 	ACCOUNT_RETURN_VAL((account_db_id > 0), {}, ACCOUNT_ERROR_INVALID_PARAMETER, ("ACCOUNT INDEX IS LESS THAN 0"));
 	if ( ((int)sync_status < 0) || (sync_status > ACCOUNT_SYNC_STATUS_RUNNING)) {
@@ -1821,7 +1874,10 @@ ACCOUNT_API int account_update_sync_status_by_id(int account_db_id, const accoun
 
 	bool is_success = account_manager_call_account_update_sync_status_by_id_sync(acc_mgr, account_db_id, sync_status, NULL, &error);
 
-	return _account_get_error_code(is_success, error);
+	error_code = _account_get_error_code(is_success, error);
+	g_clear_error(&error);
+
+	return error_code;
 }
 
 static int _account_type_free_label_items(label_s *data)
@@ -2161,11 +2217,12 @@ ACCOUNT_API int account_type_query_provider_feature_by_app_id(provider_feature_c
 
 	if (!is_success)
 	{
-//		error_code = error->code;
 		error_code = _account_get_error_code(is_success, error);
+		g_clear_error(&error);
 		_ERR("Account IPC call returned error[%d]", error_code);
 		return error_code;
 	}
+	g_clear_error(&error);
 
 	GSList* provider_feature_list = variant_to_provider_feature_list(feature_list_variant);
 	if (provider_feature_list == NULL)
@@ -2221,11 +2278,12 @@ ACCOUNT_API bool account_type_query_supported_feature(const char* app_id, const 
 	if (!is_success)
 	{
 		ret = _account_get_error_code(is_success, error);
-//		ret = error->code;
+		g_clear_error(&error);
 		_ERR("Account IPC call returned error[%d]", ret);
 		set_last_result(ret);
 		return false;
 	}
+	g_clear_error(&error);
 
 	set_last_result(ACCOUNT_ERROR_NONE);
 	_INFO("account_type_query_supported_feature end");
@@ -2428,6 +2486,8 @@ ACCOUNT_INTERNAL_API int account_type_insert_to_db(account_type_h account_type, 
 	bool is_success = account_manager_call_account_type_add_sync(acc_mgr, account_type_serialized, &db_id, NULL, &error);
 
 	int ret = _account_get_error_code(is_success, error);
+	g_clear_error(&error);
+
 	if (ret != ACCOUNT_ERROR_NONE)
 	{
 		return ret;
@@ -2446,6 +2506,7 @@ ACCOUNT_INTERNAL_API int account_type_insert_to_db(account_type_h account_type, 
 ACCOUNT_INTERNAL_API int account_type_update_to_db_by_app_id(const account_type_h account_type, const char* app_id)
 {
 	_INFO("account_type_update_to_db_by_app_id starting");
+	int error_code = ACCOUNT_ERROR_NONE;
 
 	ACCOUNT_RETURN_VAL((account_type != NULL), {}, ACCOUNT_ERROR_INVALID_PARAMETER, ("DATA IS NULL"));
 	ACCOUNT_RETURN_VAL((app_id != NULL), {}, ACCOUNT_ERROR_INVALID_PARAMETER, ("APP ID IS NULL"));
@@ -2468,12 +2529,16 @@ ACCOUNT_INTERNAL_API int account_type_update_to_db_by_app_id(const account_type_
 
 	bool is_success = account_manager_call_account_type_update_to_db_by_app_id_sync(acc_mgr, account_type_variant, app_id, NULL, &error);
 
-	return _account_get_error_code(is_success, error);
+	error_code = _account_get_error_code(is_success, error);
+	g_clear_error(&error);
+
+	return error_code;
 }
 
 ACCOUNT_INTERNAL_API int account_type_delete_by_app_id(const char* app_id)
 {
 	_INFO("account_type_delete_by_app_id starting");
+	int error_code = ACCOUNT_ERROR_NONE;
 
 	ACCOUNT_RETURN_VAL((app_id != NULL), {}, ACCOUNT_ERROR_INVALID_PARAMETER, ("APP ID IS NULL"));
 
@@ -2488,7 +2553,10 @@ ACCOUNT_INTERNAL_API int account_type_delete_by_app_id(const char* app_id)
 
 	bool is_success = account_manager_call_account_type_delete_by_app_id_sync(acc_mgr, app_id, NULL, &error);
 
-	return _account_get_error_code(is_success, error);
+	error_code = _account_get_error_code(is_success, error);
+	g_clear_error(&error);
+
+	return error_code;
 }
 
 ACCOUNT_API int account_type_query_label_by_app_id(account_label_cb callback, const char* app_id, void *user_data )
@@ -2511,6 +2579,8 @@ ACCOUNT_API int account_type_query_label_by_app_id(account_label_cb callback, co
 	bool is_success = account_manager_call_account_type_query_label_by_app_id_sync(acc_mgr, app_id, &label_list_variant, NULL, &error);
 
 	int ret = _account_get_error_code(is_success, error);
+	g_clear_error(&error);
+
 	if (ret != ACCOUNT_ERROR_NONE)
 	{
 		return ret;
@@ -2568,6 +2638,8 @@ ACCOUNT_API int account_type_query_by_app_id(const char* app_id, account_type_h 
 	bool is_success = account_manager_call_account_type_query_by_app_id_sync(acc_mgr, app_id, &account_type_variant, NULL, &error);
 
 	int ret = _account_get_error_code(is_success, error);
+	g_clear_error(&error);
+
 	if (ret != ACCOUNT_ERROR_NONE)
 	{
 		return ret;
@@ -2611,14 +2683,16 @@ ACCOUNT_API int account_type_foreach_account_type_from_db(account_type_cb callba
 
 	_INFO("after account_type_query_all_sync()");
 	int ret = _account_get_error_code(is_success, error);
+	g_clear_error(&error);
+
 	if (ret != ACCOUNT_ERROR_NONE)
 	{
 		return ret;
 	}
 
-	_INFO("before unmarshal_account_type_list");
 	GSList* account_type_list = unmarshal_account_type_list(account_type_list_variant);
-	_INFO("after unmarshal_account_type_list");
+	g_variant_unref(account_type_list_variant);
+
 	if (account_type_list == NULL)
 	{
 		return ACCOUNT_ERROR_NO_DATA;
@@ -2667,6 +2741,8 @@ ACCOUNT_API int account_type_query_label_by_locale(const char* app_id, const cha
 
 	_INFO("after account_type_query_label_by_locale_sync() : is_success=%d", is_success);
 	int ret = _account_get_error_code(is_success, error);
+	g_clear_error(&error);
+
 	if (ret != ACCOUNT_ERROR_NONE)
 	{
 		return ret;
@@ -2703,6 +2779,8 @@ ACCOUNT_API int account_type_query_by_provider_feature(account_type_cb callback,
 	bool is_success = account_manager_call_account_type_query_by_provider_feature_sync(acc_mgr, key, &account_type_list_variant, NULL, &error);
 
 	int ret = _account_get_error_code(is_success, error);
+	g_clear_error(&error);
+
 	if (ret != ACCOUNT_ERROR_NONE)
 	{
 		return ret;
@@ -2710,7 +2788,8 @@ ACCOUNT_API int account_type_query_by_provider_feature(account_type_cb callback,
 
 	_INFO("before unmarshal_account_type_list");
 	GSList* account_type_list = unmarshal_account_type_list(account_type_list_variant);
-	_INFO("after unmarshal_account_type_list");
+	g_variant_unref(account_type_list_variant);
+
 	if (account_type_list == NULL)
 	{
 		return ACCOUNT_ERROR_NO_DATA;
@@ -2740,6 +2819,7 @@ ACCOUNT_API int account_type_query_by_provider_feature(account_type_cb callback,
 ACCOUNT_API int account_type_query_app_id_exist(const char* app_id)
 {
 	_INFO("account_type_query_app_id_exist starting");
+	int error_code = ACCOUNT_ERROR_NONE;
 
 	ACCOUNT_RETURN_VAL((app_id != 0), {}, ACCOUNT_ERROR_INVALID_PARAMETER, ("APP ID IS NULL"));
 
@@ -2754,7 +2834,10 @@ ACCOUNT_API int account_type_query_app_id_exist(const char* app_id)
 
 	bool is_success = account_manager_call_account_type_query_app_id_exist_sync(acc_mgr, app_id, NULL, &error);
 
-	return _account_get_error_code(is_success, error);
+	error_code = _account_get_error_code(is_success, error);
+	g_clear_error(&error);
+
+	return error_code;
 }
 
 
