@@ -356,7 +356,7 @@ ACCOUNT_API int account_insert_to_db(account_h account, int *account_db_id)
 	GVariant* account_serialized = marshal_account(account_data);
 
 	_INFO("3. Before account_manager_call_account_add_sync");
-	bool is_success = account_manager_call_account_add_sync(acc_mgr, account_serialized, &db_id, NULL, &error);
+	bool is_success = account_manager_call_account_add_sync(acc_mgr, account_serialized, (int)getuid(), &db_id, NULL, &error);
 	ACCOUNT_CATCH_ERROR((is_success != false), {}, _account_get_error_code(is_success, error), "Failed to get dbus.");
 	g_clear_error(&error);
 
@@ -405,7 +405,7 @@ ACCOUNT_API int account_delete_from_db_by_id(int account_db_id)
 	g_clear_error(&error);
 
 	_INFO("3. Before account_manager_call_account_delete_from_db_by_id_sync");
-	is_success = account_manager_call_account_delete_from_db_by_id_sync(acc_mgr, account_db_id, NULL, &error);
+	is_success = account_manager_call_account_delete_from_db_by_id_sync(acc_mgr, account_db_id, (int)getuid(), NULL, &error);
 
 	if (!is_success)
 	{
@@ -459,7 +459,7 @@ ACCOUNT_API int account_delete_from_db_by_user_name(char *user_name, char *packa
 
 	//TODO free account_list, account_list_variant
 
-	is_success = account_manager_call_account_delete_from_db_by_user_name_sync(acc_mgr, user_name, package_name, NULL, &error);
+	is_success = account_manager_call_account_delete_from_db_by_user_name_sync(acc_mgr, user_name, package_name, (int)getuid(), NULL, &error);
 
 	if (!is_success)
 	{
@@ -509,7 +509,7 @@ int _account_delete_from_db_by_package_name(const char *package_name, bool permi
 		return ACCOUNT_ERROR_NO_DATA;
 	}
 */
-	bool is_success = account_manager_call_account_delete_from_db_by_package_name_sync(acc_mgr, package_name, permission, NULL, &error);
+	bool is_success = account_manager_call_account_delete_from_db_by_package_name_sync(acc_mgr, package_name, permission, (int)getuid(), NULL, &error);
 
 	if (!is_success)
 	{
@@ -568,7 +568,7 @@ ACCOUNT_API int account_update_to_db_by_id(account_h account, int account_id)
 
 	_INFO("3. Before account_manager_call_account_update_to_db_by_id_sync");
 	GVariant* account_serialized = marshal_account((account_s*) account);
-	is_success = account_manager_call_account_update_to_db_by_id_sync(acc_mgr, account_serialized, account_id, NULL, &error);
+	is_success = account_manager_call_account_update_to_db_by_id_sync(acc_mgr, account_serialized, account_id, (int)getuid(), NULL, &error);
 
 	if (!is_success)
 	{
@@ -682,7 +682,7 @@ ACCOUNT_API int account_update_to_db_by_user_name(account_h account, const char 
 	g_clear_error(&error);
 
 	GVariant* account_serialized = marshal_account(account_data);
-	is_success = account_manager_call_account_update_to_db_by_user_name_sync(acc_mgr, account_serialized, user_name, package_name, NULL, &error);
+	is_success = account_manager_call_account_update_to_db_by_user_name_sync(acc_mgr, account_serialized, user_name, package_name, (int)getuid(), NULL, &error);
 
 	if (!is_success)
 	{
@@ -1872,7 +1872,7 @@ ACCOUNT_API int account_update_sync_status_by_id(int account_db_id, const accoun
 		return ACCOUNT_ERROR_PERMISSION_DENIED;
 	}
 
-	bool is_success = account_manager_call_account_update_sync_status_by_id_sync(acc_mgr, account_db_id, sync_status, NULL, &error);
+	bool is_success = account_manager_call_account_update_sync_status_by_id_sync(acc_mgr, account_db_id, sync_status, (int)getuid(), NULL, &error);
 
 	error_code = _account_get_error_code(is_success, error);
 	g_clear_error(&error);
