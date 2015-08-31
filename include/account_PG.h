@@ -1062,7 +1062,7 @@ void notify_account_insert()
 
     dbus_error_init(&err);
 
-    conn = dbus_bus_get(DBUS_BUS_SYSTEM, &err);
+    conn = dbus_bus_get(DBUS_BUS_SESSION, &err);
     if  (dbus_error_is_set(&err)) {
             dbus_error_free(&err);
     }
@@ -1111,7 +1111,7 @@ void notify_account_update()
 
     dbus_error_init(&err);
 
-    conn = dbus_bus_get(DBUS_BUS_SYSTEM, &err);
+    conn = dbus_bus_get(DBUS_BUS_SESSION, &err);
     if  (dbus_error_is_set(&err)) {
             dbus_error_free(&err);
     }
@@ -1160,7 +1160,7 @@ void notify_account_delete()
 
     dbus_error_init(&err);
 
-    conn = dbus_bus_get(DBUS_BUS_SYSTEM, &err);
+    conn = dbus_bus_get(DBUS_BUS_SESSION, &err);
     if  (dbus_error_is_set(&err)) {
             dbus_error_free(&err);
     }

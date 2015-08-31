@@ -24,6 +24,8 @@
 #include <pthread.h>
 #include <vconf.h>
 #include <unistd.h>
+#include <sys/stat.h>
+#include <tzplatform_config.h>
 
 #include "account-private.h"
 #include "account_internal.h"
@@ -38,11 +40,17 @@
 #define ACCOUNT_DB_OPEN_READONLY 0
 #define ACCOUNT_DB_OPEN_READWRITE 1
 
+#define OWNER_ROOT 0
+#define GLOBAL_USER tzplatform_getuid(TZ_SYS_GLOBALAPP_USER)
+
 typedef sqlite3_stmt* account_stmt;
 
 static sqlite3* g_hAccountDB = NULL;
 static int		g_refCntDB = 0;
 pthread_mutex_t account_mutex = PTHREAD_MUTEX_INITIALIZER;
+
+static int _account_get_record_count(char* query);
+static int _account_execute_query(const char *query);
 
 static const char *_account_db_err_msg()
 {
@@ -54,39 +62,160 @@ static int _account_db_err_code()
 	return sqlite3_errcode(g_hAccountDB);
 }
 
+//TODO: Need to enable creating db on the first connect for
+//a) multi-user cases
+//b) to ensure db exist in every connect call
+
+static int _account_create_all_tables(void)
+{
+	int rc = -1;
+	int error_code = ACCOUNT_ERROR_NONE;
+	char	query[ACCOUNT_SQL_LEN_MAX] = {0, };
+
+	_INFO("create all table - BEGIN");
+	ACCOUNT_MEMSET(query, 0, sizeof(query));
+
+	/*Create the account table*/
+	ACCOUNT_SNPRINTF(query, sizeof(query), "select count(*) from sqlite_master where name in ('%s')", ACCOUNT_TABLE);
+	rc = _account_get_record_count(query);
+	if (rc <= 0) {
+		rc = _account_execute_query(ACCOUNT_SCHEMA);
+		if(rc == SQLITE_BUSY) return ACCOUNT_ERROR_DATABASE_BUSY;
+		ACCOUNT_RETURN_VAL((SQLITE_OK == rc), {}, ACCOUNT_ERROR_DB_FAILED, ("_account_execute_query(%s) failed(%d, %s).\n", ACCOUNT_SCHEMA, rc, _account_db_err_msg()));
+
+	}
+
+	/*Create capability table*/
+	ACCOUNT_MEMSET(query, 0, sizeof(query));
+	ACCOUNT_SNPRINTF(query, sizeof(query), "select count(*) from sqlite_master where name in ('%s')", CAPABILITY_TABLE);
+	rc = _account_get_record_count(query);
+	if (rc <= 0) {
+		rc = _account_execute_query(CAPABILITY_SCHEMA);
+		if(rc == SQLITE_BUSY) return ACCOUNT_ERROR_DATABASE_BUSY;
+		ACCOUNT_RETURN_VAL((SQLITE_OK == rc), {}, ACCOUNT_ERROR_DB_FAILED, ("_account_execute_query(%s) failed(%d, %s).\n", CAPABILITY_SCHEMA, rc, _account_db_err_msg()));
+	}
+
+	/* Create account custom table */
+	ACCOUNT_MEMSET(query, 0, sizeof(query));
+	ACCOUNT_SNPRINTF(query, sizeof(query), "select count(*) from sqlite_master where name in ('%s')", ACCOUNT_CUSTOM_TABLE);
+	rc = _account_get_record_count(query);
+	if (rc <= 0) {
+		rc = _account_execute_query(ACCOUNT_CUSTOM_SCHEMA);
+		if(rc == SQLITE_BUSY) return ACCOUNT_ERROR_DATABASE_BUSY;
+		ACCOUNT_RETURN_VAL((SQLITE_OK == rc), {}, ACCOUNT_ERROR_DB_FAILED, ("_account_execute_query(%s) failed(%d, %s).\n", query, rc, _account_db_err_msg()));
+	}
+
+	/* Create account type table */
+	ACCOUNT_MEMSET(query, 0, sizeof(query));
+	ACCOUNT_SNPRINTF(query, sizeof(query), "select count(*) from sqlite_master where name in ('%s')", ACCOUNT_TYPE_TABLE);
+	rc = _account_get_record_count(query);
+	if (rc <= 0) {
+		rc = _account_execute_query(ACCOUNT_TYPE_SCHEMA);
+		if(rc == SQLITE_BUSY) return ACCOUNT_ERROR_DATABASE_BUSY;
+		ACCOUNT_RETURN_VAL((SQLITE_OK == rc), {}, ACCOUNT_ERROR_DB_FAILED, ("_account_execute_query(%s) failed(%d, %s).\n", ACCOUNT_TYPE_SCHEMA, rc, _account_db_err_msg()));
+	}
+
+	/* Create label table */
+	ACCOUNT_MEMSET(query, 0, sizeof(query));
+	ACCOUNT_SNPRINTF(query, sizeof(query), "select count(*) from sqlite_master where name in ('%s')", LABEL_TABLE);
+	rc = _account_get_record_count(query);
+	if (rc <= 0) {
+		rc = _account_execute_query(LABEL_SCHEMA);
+		if(rc == SQLITE_BUSY) return ACCOUNT_ERROR_DATABASE_BUSY;
+		ACCOUNT_RETURN_VAL((SQLITE_OK == rc), {}, ACCOUNT_ERROR_DB_FAILED, ("_account_execute_query(%s) failed(%d, %s).\n", LABEL_SCHEMA, rc, _account_db_err_msg()));
+	}
+
+	/* Create account feature table */
+	ACCOUNT_MEMSET(query, 0, sizeof(query));
+	ACCOUNT_SNPRINTF(query, sizeof(query), "select count(*) from sqlite_master where name in ('%s')", PROVIDER_FEATURE_TABLE);
+	rc = _account_get_record_count(query);
+	if (rc <= 0) {
+		rc = _account_execute_query(PROVIDER_FEATURE_SCHEMA);
+		if(rc == SQLITE_BUSY) return ACCOUNT_ERROR_DATABASE_BUSY;
+		ACCOUNT_RETURN_VAL((SQLITE_OK == rc), {}, ACCOUNT_ERROR_DB_FAILED, ("_account_execute_query(%s) failed(%d, %s).\n", PROVIDER_FEATURE_SCHEMA, rc, _account_db_err_msg()));
+	}
+
+	_INFO("create all table - END");
+	return error_code;
+}
+
+static int _account_check_is_all_table_exists()
+{
+	int 	rc = 0;
+	char	query[ACCOUNT_SQL_LEN_MAX] = {0,};
+	ACCOUNT_MEMSET(query, 0, sizeof(query));
+
+	ACCOUNT_SNPRINTF(query, sizeof(query), "select count(*) from sqlite_master where name in ('%s', '%s', '%s', '%s', '%s', '%s')",
+			ACCOUNT_TABLE, CAPABILITY_TABLE, ACCOUNT_CUSTOM_TABLE, ACCOUNT_TYPE_TABLE, LABEL_TABLE, PROVIDER_FEATURE_TABLE);
+	rc = _account_get_record_count(query);
+
+	if (rc != ACCOUNT_TABLE_TOTAL_COUNT) {
+		ACCOUNT_ERROR("Table count is not matched rc=%d\n", rc);
+	}
+
+	return rc;
+}
+
 static int _account_db_open(int mode)
 {
 	int  rc = 0;
 	char account_db_path[256] = {0, };
+	uid_t uid = -1;
 
 	_INFO( "start to get DB path");
 
 	ACCOUNT_MEMSET(account_db_path, 0x00, sizeof(account_db_path));
-	ACCOUNT_SNPRINTF(account_db_path, sizeof(account_db_path), "%s", ACCOUNT_DB_PATH);
+
+	uid = getuid();
+	if (uid == OWNER_ROOT || uid == GLOBAL_USER)
+		ACCOUNT_SNPRINTF(account_db_path, sizeof(account_db_path), "%s", ACCOUNT_GLOBAL_DB_PATH);
+	else
+		ACCOUNT_SNPRINTF(account_db_path, sizeof(account_db_path), "%s", ACCOUNT_DB_PATH);
 	_INFO( "account_db_path canonicalized = %s", account_db_path);
 
 	if (!g_hAccountDB) {
-		if(mode == ACCOUNT_DB_OPEN_READWRITE)
+		if (-1 == access (USER_DB_DIR, F_OK)) {
+			mkdir(USER_DB_DIR, 755);
+		}
+
+		if (mode == ACCOUNT_DB_OPEN_READWRITE)
 			rc = db_util_open(account_db_path, &g_hAccountDB, DB_UTIL_REGISTER_HOOK_METHOD);
-		else if(mode == ACCOUNT_DB_OPEN_READONLY)
-			rc = db_util_open_with_options(account_db_path, &g_hAccountDB, SQLITE_OPEN_READONLY, NULL);
 		else {
 			return ACCOUNT_ERROR_DB_NOT_OPENED;
 		}
 
-		if( _account_db_err_code() == SQLITE_PERM ){
+		if (_account_db_err_code() == SQLITE_PERM){
 			ACCOUNT_ERROR( "Access failed(%s)", _account_db_err_msg());
 			return ACCOUNT_ERROR_PERMISSION_DENIED;
 		}
 
+		if (rc == SQLITE_BUSY) {
+			ACCOUNT_ERROR( "busy handler fail.");
+			return ACCOUNT_ERROR_DATABASE_BUSY;
+		}
+
 		ACCOUNT_RETURN_VAL((rc != SQLITE_PERM), {}, ACCOUNT_ERROR_PERMISSION_DENIED, ("Account permission denied rc : %d", rc));
 		ACCOUNT_RETURN_VAL((rc == SQLITE_OK), {}, ACCOUNT_ERROR_DB_NOT_OPENED, ("The database isn't connected. rc : %d", rc));
+
+		rc = _account_check_is_all_table_exists();
+
+		if (rc < 0) {
+			_ERR("_account_check_is_all_table_exists rc=[%d]", rc);
+			return rc;
+		} else if (rc == ACCOUNT_TABLE_TOTAL_COUNT) {
+			_INFO("Tables OK rc=[%d]", rc);
+		} else {
+			int ret = _account_create_all_tables();
+			if (ret != ACCOUNT_ERROR_NONE) {
+				_ERR("_account_create_all_tables fail ret=[%d]", ret);
+				return ret;
+			}
+		}
+
 		g_refCntDB++;
 	} else {
 		g_refCntDB++;
 	}
-
-	ACCOUNT_RETURN_VAL((rc == SQLITE_OK), {}, ACCOUNT_ERROR_DB_NOT_OPENED, ("busy handler fail. rc : %d", rc));
 
 	return ACCOUNT_ERROR_NONE;
 }
@@ -820,10 +949,10 @@ ACCOUNT_INTERNAL_API int account_type_insert_to_db_offline(account_type_h accoun
 		goto RETURN;
 	}
 
-	int uid = getuid();
-	if (uid != 0)
+	uid_t uid = getuid();
+	if (uid != OWNER_ROOT && uid != GLOBAL_USER)
 	{
-		_ERR("current daemon is not root user, uid=%d", uid);
+		_ERR("current process is not root user nor global user, uid=%d", uid);
 		goto RETURN;
 	}
 
@@ -875,8 +1004,8 @@ ACCOUNT_INTERNAL_API int account_type_delete_by_app_id_offline(const char* app_i
 		goto RETURN;
 	}
 
-	int uid = getuid();
-	if (uid != 0)
+	uid_t uid = getuid();
+	if (uid != OWNER_ROOT && uid != GLOBAL_USER)
 	{
 		_ERR("current daemon is not root user, uid=%d", uid);
 		goto RETURN;

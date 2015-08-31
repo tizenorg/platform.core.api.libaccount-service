@@ -226,7 +226,7 @@ _account_manager_get_instance ()
 	GDBusConnection *connection = NULL;
 	GError *error = NULL;
 
-	connection = g_bus_get_sync (G_BUS_TYPE_SYSTEM, NULL, &error);
+	connection = g_bus_get_sync (G_BUS_TYPE_SESSION, NULL, &error);
 
 	_INFO("after g_bus_get_sync");
 
