@@ -28,6 +28,7 @@
 
 #include <dbg.h>
 #include <account-private.h>
+#include <account_free.h>
 #include <account_ipc_marshal.h>
 #include <account-mgr-stub.h>
 
@@ -50,9 +51,9 @@
 static AccountManager *_acc_mgr = NULL;
 
 static char *_account_get_text(const char *text_data);
-static int _account_gslist_free(GSList* list);
-static int _account_glist_free(GList* list);
-
+//static int _account_gslist_free(GSList* list);
+//static int _account_glist_free(GList* list);
+/*
 static int _account_free_capability_items(account_capability_s *data)
 {
 	if(!data) {
@@ -118,7 +119,7 @@ static int _account_custom_gslist_free(GSList* list)
 
 	return ACCOUNT_ERROR_NONE;
 }
-/*
+
 static int _account_list_free(GList* list)
 {
 	if(!list){
@@ -130,7 +131,7 @@ static int _account_list_free(GList* list)
 
 	return ACCOUNT_ERROR_NONE;
 }
-*/
+
 
 static int _account_free_account_items(account_s *data)
 {
@@ -197,6 +198,7 @@ static int _account_glist_free(GList* list)
 
 	return ACCOUNT_ERROR_NONE;
 }
+*/
 
 static char *_account_get_text(const char *text_data)
 {
@@ -308,9 +310,11 @@ static int _account_get_error_code(bool is_success, GError *error)
 					if (g_strcmp0(_account_svc_errors[i].dbus_error_name, remote_error) == 0)
 					{
 						_INFO("Remote error code matched[%d]", _account_svc_errors[i].error_code);
+						g_free(remote_error);
 						return _account_svc_errors[i].error_code;
 					}
 				}
+				g_free(remote_error);
 			}
 		}
 		//All undocumented errors mapped to ACCOUNT_ERROR_PERMISSION_DENIED
@@ -466,12 +470,12 @@ ACCOUNT_API int account_delete_from_db_by_user_name(char *user_name, char *packa
 		error_code = _account_get_error_code(is_success, error);
 		g_clear_error(&error);
 		_ERR("account_manager_call_account_delete_from_db_by_user_name_sync failed [%d]", error_code);
-		_account_gslist_free(account_list);
+		_account_gslist_account_free(account_list);
 		return error_code;
 	}
 	g_clear_error(&error);
 
-	_account_gslist_free(account_list);
+	_account_gslist_account_free(account_list);
 	return ACCOUNT_ERROR_NONE;
 }
 
@@ -739,8 +743,7 @@ ACCOUNT_API int account_destroy(account_h account)
 
 	ACCOUNT_RETURN_VAL((data != NULL), {}, ACCOUNT_ERROR_INVALID_PARAMETER, ("Account handle is null!"));
 
-	_account_free_account_items(data);
-	_ACCOUNT_FREE(data);
+	_account_free_account_with_items(data);
 
 	_INFO("account_destroy end");
 	return ACCOUNT_ERROR_NONE;
@@ -1473,7 +1476,7 @@ ACCOUNT_API int account_foreach_account_from_db(account_cb callback, void *user_
 		}
 		_INFO("After one iteration callback");
 	}
-	_account_gslist_free(account_list);
+	_account_gslist_account_free(account_list);
 
 	_INFO("account_foreach_account_from_db end");
 	return ACCOUNT_ERROR_NONE;
@@ -1518,8 +1521,7 @@ ACCOUNT_API int account_query_account_by_account_id(int account_db_id, account_h
 
 	account_s **input = (account_s **)account;
 
-	_account_free_account_items(*input);
-	_ACCOUNT_FREE(*input);
+	_account_free_account_with_items(*input);
 
 	*input = account_data;
 
@@ -1577,7 +1579,7 @@ ACCOUNT_API int account_query_account_by_user_name(account_cb callback, const ch
 	}
 	_INFO("account_query_account_by_user_name end");
 
-	_account_gslist_free(account_list);
+	_account_gslist_account_free(account_list);
 	return ACCOUNT_ERROR_NONE;
 }
 
@@ -1629,7 +1631,7 @@ ACCOUNT_API int account_query_account_by_package_name(account_cb callback, const
 			break;
 		}
 	}
-	_account_gslist_free(account_list);
+	_account_gslist_account_free(account_list);
 	_INFO("account_query_account_by_package_name end");
 	return ACCOUNT_ERROR_NONE;
 }
@@ -1687,7 +1689,7 @@ ACCOUNT_API int account_query_account_by_capability(account_cb callback, const c
 			break;
 		}
 	}
-	_account_gslist_free(account_list);
+	_account_gslist_account_free(account_list);
 	_INFO("account_query_account_by_capability end");
 	return ACCOUNT_ERROR_NONE;
 }
@@ -1740,7 +1742,7 @@ ACCOUNT_API int account_query_account_by_capability_type(account_cb callback, co
 			break;
 		}
 	}
-	_account_gslist_free(account_list);
+	_account_gslist_account_free(account_list);
 	_INFO("account_query_account_by_capability end");
 	return ACCOUNT_ERROR_NONE;
 }
@@ -1794,7 +1796,7 @@ ACCOUNT_API int account_query_capability_by_account_id(capability_cb callback, i
 		_INFO("");
 	}
 
-	_account_capability_gslist_free(capability_list);
+	 _account_gslist_capability_free(capability_list);
 	_INFO("account_query_capability_by_account_id end");
 	return ACCOUNT_ERROR_NONE;
 }
@@ -1880,6 +1882,7 @@ ACCOUNT_API int account_update_sync_status_by_id(int account_db_id, const accoun
 	return error_code;
 }
 
+/*
 static int _account_type_free_label_items(label_s *data)
 {
 	if(!data) {
@@ -1976,6 +1979,7 @@ static int _account_type_gslist_free(GSList* list)
 
 	return ACCOUNT_ERROR_NONE;
 }
+*/
 
 /*
 static int _account_type_glist_free(GList* list)
@@ -2041,8 +2045,7 @@ ACCOUNT_API int account_type_destroy(account_type_h account_type)
 		return ACCOUNT_ERROR_INVALID_PARAMETER;
 	}
 
-	_account_type_free_account_type_items(data);
-	_ACCOUNT_FREE(data);
+	_account_type_free_account_type_with_items(data);
 
 	return ACCOUNT_ERROR_NONE;
 }
@@ -2244,7 +2247,7 @@ ACCOUNT_API int account_type_query_provider_feature_by_app_id(provider_feature_c
 		}
 	}
 
-	_account_type_provider_feature_gslist_free(provider_feature_list);
+	_account_type_gslist_feature_free(provider_feature_list);
 	_INFO("account_type_query_provider_feature_by_app_id end");
 	return error_code;
 }
@@ -2610,7 +2613,7 @@ ACCOUNT_API int account_type_query_label_by_app_id(account_label_cb callback, co
 		_INFO("");
 	}
 
-	_account_type_label_gslist_free(label_list);
+	_account_type_gslist_label_free(label_list);
 	_INFO("account_type_query_label_by_app_id end");
 	return ACCOUNT_ERROR_NONE;
 }
@@ -2713,7 +2716,7 @@ ACCOUNT_API int account_type_foreach_account_type_from_db(account_type_cb callba
 		}
 	}
 
-	_account_type_gslist_free(account_type_list);
+	_account_type_gslist_account_type_free(account_type_list);
 	_INFO("account_type_foreach_account_type_from_db end");
 	return ACCOUNT_ERROR_NONE;
 }
@@ -2811,7 +2814,7 @@ ACCOUNT_API int account_type_query_by_provider_feature(account_type_cb callback,
 		_INFO("");
 	}
 
-	_account_type_gslist_free(account_type_list);
+	_account_type_gslist_account_type_free(account_type_list);
 	_INFO("account_type_query_by_provider_feature end");
 	return ACCOUNT_ERROR_NONE;
 }

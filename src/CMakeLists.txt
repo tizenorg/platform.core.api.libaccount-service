@@ -64,7 +64,7 @@ ELSE(FEATURE_PROFILE_MOBILE)
 INSTALL(FILES ${CMAKE_SOURCE_DIR}/include/wearable/account.h DESTINATION include)
 ENDIF(FEATURE_PROFILE_MOBILE)
 
-INSTALL(FILES ${CMAKE_SOURCE_DIR}/include/account.h DESTINATION include)
+#INSTALL(FILES ${CMAKE_SOURCE_DIR}/include/account.h DESTINATION include)
 INSTALL(FILES ${CMAKE_SOURCE_DIR}/include/account-error.h DESTINATION include)
 INSTALL(FILES ${CMAKE_SOURCE_DIR}/include/account-types.h DESTINATION include)
 INSTALL(FILES ${CMAKE_SOURCE_DIR}/include/account_internal.h DESTINATION include)

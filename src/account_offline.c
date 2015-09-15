@@ -23,6 +23,7 @@
 #include <db-util.h>
 #include <pthread.h>
 #include <vconf.h>
+#include <account_free.h>
 #include <unistd.h>
 
 #include "account-private.h"
@@ -908,3 +909,450 @@ RETURN:
 	return return_code;
 }
 
+static void _account_db_data_to_text(const char *textbuf, char **output)
+{
+	if (textbuf && strlen(textbuf)>0) {
+		if (*output) {
+			free(*output);
+			*output = NULL;
+		}
+		*output = strdup(textbuf);
+	}
+}
+static int _account_query_table_column_int(account_stmt pStmt, int pos)
+{
+	if(!pStmt){
+		ACCOUNT_ERROR("statement is null");
+		return -1;
+	}
+
+	if(pos < 0){
+		ACCOUNT_ERROR("invalid pos");
+		return -1;
+	}
+
+	return sqlite3_column_int(pStmt, pos);
+}
+
+static const char *_account_query_table_column_text(account_stmt pStmt, int pos)
+{
+	if(!pStmt){
+		ACCOUNT_ERROR("statement is null");
+		return NULL;
+	}
+
+	if(pos < 0){
+		ACCOUNT_ERROR("invalid pos");
+		return NULL;
+	}
+
+	return (const char*)sqlite3_column_text(pStmt, pos);
+}
+
+static void _account_convert_column_to_account(account_stmt hstmt, account_s *account_record)
+{
+	const char *textbuf = NULL;
+
+	account_record->id = _account_query_table_column_int(hstmt, ACCOUNT_FIELD_ID);
+	ACCOUNT_DEBUG("account_record->id =[%d]", account_record->id);
+
+	textbuf = _account_query_table_column_text(hstmt, ACCOUNT_FIELD_USER_NAME);
+	_account_db_data_to_text(textbuf, &(account_record->user_name));
+
+	textbuf = _account_query_table_column_text(hstmt, ACCOUNT_FIELD_EMAIL_ADDRESS);
+	_account_db_data_to_text(textbuf, &(account_record->email_address));
+
+	textbuf = _account_query_table_column_text(hstmt, ACCOUNT_FIELD_DISPLAY_NAME);
+	_account_db_data_to_text(textbuf, &(account_record->display_name));
+
+	textbuf = _account_query_table_column_text(hstmt, ACCOUNT_FIELD_ICON_PATH);
+	_account_db_data_to_text(textbuf, &(account_record->icon_path));
+
+	textbuf = _account_query_table_column_text(hstmt, ACCOUNT_FIELD_SOURCE);
+	_account_db_data_to_text(textbuf, &(account_record->source));
+
+	textbuf = _account_query_table_column_text(hstmt, ACCOUNT_FIELD_PACKAGE_NAME);
+	_account_db_data_to_text(textbuf, &(account_record->package_name));
+
+	textbuf = _account_query_table_column_text(hstmt, ACCOUNT_FIELD_ACCESS_TOKEN);
+	_account_db_data_to_text(textbuf, &(account_record->access_token));
+
+	textbuf = _account_query_table_column_text(hstmt, ACCOUNT_FIELD_DOMAIN_NAME);
+	_account_db_data_to_text(textbuf, &(account_record->domain_name));
+
+	account_record->auth_type = _account_query_table_column_int(hstmt, ACCOUNT_FIELD_AUTH_TYPE);
+
+	account_record->secret = _account_query_table_column_int(hstmt, ACCOUNT_FIELD_SECRET);
+
+	account_record->sync_support = _account_query_table_column_int(hstmt, ACCOUNT_FIELD_SYNC_SUPPORT);
+
+	textbuf = _account_query_table_column_text(hstmt, ACCOUNT_FIELD_USER_TEXT_0);
+	_account_db_data_to_text(textbuf, &(account_record->user_data_txt[0]));
+
+	textbuf = _account_query_table_column_text(hstmt, ACCOUNT_FIELD_USER_TEXT_1);
+	_account_db_data_to_text(textbuf, &(account_record->user_data_txt[1]));
+
+	textbuf = _account_query_table_column_text(hstmt, ACCOUNT_FIELD_USER_TEXT_2);
+	_account_db_data_to_text(textbuf, &(account_record->user_data_txt[2]));
+
+	textbuf = _account_query_table_column_text(hstmt, ACCOUNT_FIELD_USER_TEXT_3);
+	_account_db_data_to_text(textbuf, &(account_record->user_data_txt[3]));
+
+	textbuf = _account_query_table_column_text(hstmt, ACCOUNT_FIELD_USER_TEXT_4);
+	_account_db_data_to_text(textbuf, &(account_record->user_data_txt[4]));
+
+	account_record->user_data_int[0] = _account_query_table_column_int(hstmt, ACCOUNT_FIELD_USER_INT_0);
+	account_record->user_data_int[1] = _account_query_table_column_int(hstmt, ACCOUNT_FIELD_USER_INT_1);
+	account_record->user_data_int[2] = _account_query_table_column_int(hstmt, ACCOUNT_FIELD_USER_INT_2);
+	account_record->user_data_int[3] = _account_query_table_column_int(hstmt, ACCOUNT_FIELD_USER_INT_3);
+	account_record->user_data_int[4] = _account_query_table_column_int(hstmt, ACCOUNT_FIELD_USER_INT_4);
+}
+
+GList* _account_query_account_by_package_name(const char* package_name, int *error_code)
+{
+	_INFO("_account_query_account_by_package_name");
+
+	*error_code = ACCOUNT_ERROR_NONE;
+	account_stmt	hstmt = NULL;
+	char			query[ACCOUNT_SQL_LEN_MAX] = {0, };
+	int 			rc = 0;
+
+	ACCOUNT_RETURN_VAL((package_name != NULL), {*error_code = ACCOUNT_ERROR_INVALID_PARAMETER;}, NULL, ("PACKAGE NAME IS NULL"));
+	ACCOUNT_RETURN_VAL((g_hAccountDB != NULL), {*error_code = ACCOUNT_ERROR_DB_NOT_OPENED;}, NULL, ("The database isn't connected."));
+
+	ACCOUNT_MEMSET(query, 0x00, ACCOUNT_SQL_LEN_MAX);
+
+	ACCOUNT_SNPRINTF(query, sizeof(query), "SELECT * FROM %s WHERE package_name=?", ACCOUNT_TABLE);
+
+	hstmt = _account_prepare_query(query);
+
+	if( _account_db_err_code() == SQLITE_PERM ){
+		ACCOUNT_ERROR( "Access failed(%s)", _account_db_err_msg());
+		*error_code = ACCOUNT_ERROR_PERMISSION_DENIED;
+		return NULL;
+	}
+
+	int binding_count = 1;
+	_account_query_bind_text(hstmt, binding_count++, package_name);
+
+	rc = _account_query_step(hstmt);
+
+	account_s* account_head = NULL;
+
+	ACCOUNT_CATCH_ERROR_P(rc == SQLITE_ROW, {}, ACCOUNT_ERROR_RECORD_NOT_FOUND, ("The record isn't found.(%s)\n", package_name));
+
+	int tmp = 0;
+
+	account_head = (account_s*) malloc(sizeof(account_s));
+	if (account_head == NULL) {
+		ACCOUNT_FATAL("malloc Failed");
+		if (hstmt != NULL) {
+			rc = _account_query_finalize(hstmt);
+			ACCOUNT_RETURN_VAL((rc == ACCOUNT_ERROR_NONE), {*error_code = rc;}, NULL, ("finalize error"));
+			hstmt = NULL;
+		}
+		*error_code = ACCOUNT_ERROR_OUT_OF_MEMORY;
+		return NULL;
+	}
+	ACCOUNT_MEMSET(account_head, 0x00, sizeof(account_s));
+
+	while (rc == SQLITE_ROW) {
+		account_s* account_record = NULL;
+
+		account_record = (account_s*) malloc(sizeof(account_s));
+
+		if (account_record == NULL) {
+			ACCOUNT_FATAL("malloc Failed");
+			break;
+		}
+		ACCOUNT_MEMSET(account_record, 0x00, sizeof(account_s));
+
+		_account_convert_column_to_account(hstmt, account_record);
+
+		_INFO("Adding account_list");
+		account_head->account_list = g_list_append(account_head->account_list, account_record);
+
+		rc = _account_query_step(hstmt);
+		tmp++;
+	}
+
+	rc = _account_query_finalize(hstmt);
+	ACCOUNT_CATCH_ERROR_P((rc == ACCOUNT_ERROR_NONE), {}, rc, ("finalize error"));
+	hstmt = NULL;
+/*
+	GList *iter;
+
+	tmp = g_list_length(account_head->account_list);
+
+	for (iter = account_head->account_list; iter != NULL; iter = g_list_next(iter)) {
+		account_s* testaccount = (account_s*)iter->data;
+
+		_account_query_capability_by_account_id(_account_get_capability_text_cb, testaccount->id, (void*)testaccount);
+		_account_query_custom_by_account_id(_account_get_custom_text_cb, testaccount->id, (void*)testaccount);
+	}
+*/
+	*error_code = ACCOUNT_ERROR_NONE;
+
+CATCH:
+	if (hstmt != NULL)
+	{
+		rc = _account_query_finalize(hstmt);
+		if (rc != ACCOUNT_ERROR_NONE) {
+			*error_code = rc;
+			_ERR("finalize error");
+		}
+		hstmt = NULL;
+	}
+
+	pthread_mutex_unlock(&account_mutex);
+
+	if( (*error_code != ACCOUNT_ERROR_NONE) && account_head ) {
+		_account_glist_account_free(account_head->account_list);
+		_ACCOUNT_FREE(account_head);
+		account_head = NULL;
+	}
+
+	if ((*error_code == ACCOUNT_ERROR_NONE) && account_head != NULL)
+	{
+		_INFO("Returning account_list");
+//		_remove_sensitive_info_from_non_owning_account_list(getpid(), account_head->account_list);
+		GList* result = account_head->account_list;
+		_ACCOUNT_FREE(account_head);
+		return result;
+	}
+	return NULL;
+}
+
+static void _account_insert_delete_update_notification_send(char *noti_name, int pid)
+{
+	if (!noti_name) {
+		_ERR("Noti Name is NULL!!!!!!\n");
+		return;
+	}
+
+	if (vconf_set_str(VCONFKEY_ACCOUNT_MSG_STR, noti_name) != 0) {
+		_ERR("Vconf MSG Str set FAILED !!!!!!\n");;
+	}
+}
+
+int _account_delete_from_db_by_package_name_offline(const char *package_name)
+{
+	int 			error_code = ACCOUNT_ERROR_NONE;
+	account_stmt	hstmt = NULL;
+	char			query[ACCOUNT_SQL_LEN_MAX] = {0, };
+	int 			rc = 0;
+	int 			ret_transaction = 0;
+	bool			is_success = FALSE;
+	int 			binding_count = 1;
+	GSList			*account_id_list = NULL;
+	int				ret = -1;
+
+	// It only needs list of ids, does not need to query sensitive info. So sending 0
+	GList* account_list_temp = _account_query_account_by_package_name(package_name, &ret);
+	if (account_list_temp == NULL)
+	{
+		_ERR("_account_query_account_by_package_name returned NULL");
+		return ACCOUNT_ERROR_DB_FAILED;
+	}
+
+	if( _account_db_err_code() == SQLITE_PERM ){
+		ACCOUNT_ERROR( "Access failed(%s)", _account_db_err_msg());
+		_account_glist_account_free(account_list_temp);
+		return ACCOUNT_ERROR_PERMISSION_DENIED;
+	}
+
+	if(ret != ACCOUNT_ERROR_NONE){
+		_account_glist_account_free(account_list_temp);
+		return ret;
+	}
+
+	account_list_temp = g_list_first(account_list_temp);
+	_INFO("account_list_temp length=[%d]",g_list_length(account_list_temp));
+
+	GList* iter = NULL;
+	for (iter = account_list_temp; iter != NULL; iter = g_list_next(iter))
+	{
+		_INFO("iterating account_list_temp");
+		account_s *account = NULL;
+		_INFO("Before iter->data");
+		account = (account_s*)iter->data;
+		_INFO("After iter->data");
+		if (account != NULL)
+		{
+			char id[256] = {0, };
+
+			ACCOUNT_MEMSET(id, 0, 256);
+
+			ACCOUNT_SNPRINTF(id, 256, "%d", account->id);
+
+			_INFO("Adding account id [%s]", id);
+			account_id_list = g_slist_append(account_id_list, g_strdup(id));
+		}
+	}
+
+	_account_glist_account_free(account_list_temp);
+	/* transaction control required*/
+	ret_transaction = _account_begin_transaction();
+
+	if( _account_db_err_code() == SQLITE_PERM ){
+		pthread_mutex_unlock(&account_mutex);
+		ACCOUNT_ERROR( "Access failed(%s)", _account_db_err_msg());
+		return ACCOUNT_ERROR_PERMISSION_DENIED;
+	}
+
+	if( ret_transaction == ACCOUNT_ERROR_DATABASE_BUSY ){
+		ACCOUNT_ERROR( "database busy(%s)", _account_db_err_msg());
+		pthread_mutex_unlock(&account_mutex);
+		return ACCOUNT_ERROR_DATABASE_BUSY;
+	}else if (ret_transaction != ACCOUNT_ERROR_NONE) {
+		ACCOUNT_ERROR("account_delete:_account_begin_transaction fail %d\n", ret_transaction);
+		pthread_mutex_unlock(&account_mutex);
+		return ret_transaction;
+	}
+
+	/* delete custom table  */
+	ACCOUNT_MEMSET(query, 0, sizeof(query));
+	ACCOUNT_SNPRINTF(query, sizeof(query), "DELETE FROM %s WHERE AppId = ?", ACCOUNT_CUSTOM_TABLE);
+
+	hstmt = _account_prepare_query(query);
+
+	if( _account_db_err_code() == SQLITE_PERM ){
+		_account_end_transaction(FALSE);
+		pthread_mutex_unlock(&account_mutex);
+		ACCOUNT_ERROR( "Access failed(%s)", _account_db_err_msg());
+		return ACCOUNT_ERROR_PERMISSION_DENIED;
+	}
+
+	ACCOUNT_CATCH_ERROR(hstmt != NULL, {}, ACCOUNT_ERROR_DB_FAILED,
+			("_account_svc_query_prepare(%s) failed(%s).\n", query, _account_db_err_msg()));
+
+	binding_count = 1;
+	_account_query_bind_text(hstmt, binding_count++, package_name);
+
+	rc = _account_query_step(hstmt);
+	ACCOUNT_CATCH_ERROR(rc == SQLITE_DONE, {}, ACCOUNT_ERROR_RECORD_NOT_FOUND, ("The record isn't found.\n"));
+
+	rc = _account_query_finalize(hstmt);
+	ACCOUNT_RETURN_VAL((rc == ACCOUNT_ERROR_NONE), {}, rc, ("finalize error"));
+	hstmt = NULL;
+
+	/* delete capability table */
+	ACCOUNT_MEMSET(query, 0, sizeof(query));
+	ACCOUNT_SNPRINTF(query, sizeof(query), "DELETE FROM %s WHERE package_name = ?", CAPABILITY_TABLE);
+
+	hstmt = _account_prepare_query(query);
+
+	ACCOUNT_CATCH_ERROR(hstmt != NULL, {}, ACCOUNT_ERROR_DB_FAILED,
+			("_account_svc_query_prepare(%s) failed(%s).\n", query, _account_db_err_msg()));
+
+	binding_count = 1;
+	_account_query_bind_text(hstmt, binding_count++, package_name);
+
+	rc = _account_query_step(hstmt);
+	ACCOUNT_CATCH_ERROR(rc == SQLITE_DONE, {}, ACCOUNT_ERROR_RECORD_NOT_FOUND, ("The record isn't found.\n"));
+
+	rc = _account_query_finalize(hstmt);
+	ACCOUNT_RETURN_VAL((rc == ACCOUNT_ERROR_NONE), {}, rc, ("finalize error"));
+	hstmt = NULL;
+
+	/* delete account table */
+	ACCOUNT_MEMSET(query, 0, sizeof(query));
+
+	ACCOUNT_SNPRINTF(query, sizeof(query), "DELETE FROM %s WHERE package_name = ?", ACCOUNT_TABLE);
+
+	hstmt = _account_prepare_query(query);
+	ACCOUNT_CATCH_ERROR(hstmt != NULL, {}, ACCOUNT_ERROR_DB_FAILED,
+			("_account_svc_query_prepare(%s) failed(%s).\n", query, _account_db_err_msg()));
+
+	binding_count = 1;
+	_account_query_bind_text(hstmt, binding_count++, package_name);
+
+	rc = _account_query_step(hstmt);
+	ACCOUNT_CATCH_ERROR(rc == SQLITE_DONE, {}, ACCOUNT_ERROR_RECORD_NOT_FOUND, ("The record isn't found. package_name=%s, rc=%d\n", package_name, rc));
+
+	rc = _account_query_finalize(hstmt);
+	ACCOUNT_RETURN_VAL((rc == ACCOUNT_ERROR_NONE), {}, rc, ("finalize error"));
+	is_success = TRUE;
+
+	hstmt = NULL;
+
+CATCH:
+	if (hstmt != NULL) {
+		rc = _account_query_finalize(hstmt);
+		ACCOUNT_RETURN_VAL((rc == ACCOUNT_ERROR_NONE), {}, rc, ("finalize error"));
+		hstmt = NULL;
+	}
+
+	ret_transaction = _account_end_transaction(is_success);
+
+	if (ret_transaction != ACCOUNT_ERROR_NONE) {
+		ACCOUNT_ERROR("account_delete:_account_end_transaction fail %d, is_success=%d\n", ret_transaction, is_success);
+	} else {
+		if (is_success == true) {
+			GSList* gs_iter = NULL;
+			for (gs_iter = account_id_list; gs_iter != NULL; gs_iter = g_slist_next(gs_iter)) {
+				char* p_tmpid = NULL;
+				p_tmpid = (char*)gs_iter->data;
+				char buf[64]={0,};
+				ACCOUNT_SNPRINTF(buf, sizeof(buf), "%s:%s", ACCOUNT_NOTI_NAME_DELETE, p_tmpid);
+				ACCOUNT_SLOGD("%s", buf);
+				_account_insert_delete_update_notification_send(buf, getpid());
+				_ACCOUNT_FREE(p_tmpid);
+			}
+			g_slist_free(account_id_list);
+		}
+	}
+
+	pthread_mutex_unlock(&account_mutex);
+
+	_INFO("_account_delete_from_db_by_package_name_offline end");
+	return error_code;
+}
+
+ACCOUNT_INTERNAL_API int account_delete_from_db_by_package_name_offline(const char *package_name)
+{
+	_INFO("_account_delete_from_db_by_package_name_offline");
+
+	ACCOUNT_RETURN_VAL((package_name != NULL), {}, ACCOUNT_ERROR_INVALID_PARAMETER, ("package_name is null!"));
+
+	int return_code = _account_db_open(1);
+	if (return_code != ACCOUNT_ERROR_NONE)
+	{
+		_ERR("_account_db_open() error, ret = %d", return_code);
+
+		goto RETURN;
+	}
+
+	int uid = getuid();
+	if (uid != 0)
+	{
+		_ERR("current process user is not root, uid=%d", uid);
+		return_code = ACCOUNT_ERROR_PERMISSION_DENIED;
+		goto RETURN;
+	}
+
+	_INFO("before _account_delete_from_db_by_package_name_offline");
+	return_code = _account_delete_from_db_by_package_name_offline(package_name);
+	_INFO("after _account_delete_from_db_by_package_name_offline=[%d]", return_code);
+
+	if (return_code != ACCOUNT_ERROR_NONE)
+	{
+		_ERR("_account_delete_from_db_by_package_name_offline error");
+		goto RETURN;
+	}
+
+RETURN:
+	_INFO("account_delete_from_db_by_package_name_offline end");
+
+	if( g_hAccountDB == NULL )
+		return return_code;
+
+	return_code = _account_db_close();
+	if (return_code != ACCOUNT_ERROR_NONE)
+	{
+		ACCOUNT_DEBUG("_account_db_close() fail[%d]", return_code);
+		return_code = ACCOUNT_ERROR_DB_FAILED;
+	}
+
+	return return_code;
+}
