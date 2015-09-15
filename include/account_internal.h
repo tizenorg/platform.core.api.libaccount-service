@@ -41,7 +41,7 @@ extern "C"
 
 /**
  * @internal
- * @brief  Deletes an account from the account database by package name without permission check.
+ * @brief  Deletes an account from the account database by package name.
  *
  * @since_tizen 2.4
  * @privlevel  public
@@ -59,8 +59,6 @@ extern "C"
  * @retval  #ACCOUNT_ERROR_DATABASE_BUSY      SQLite handler is busy
  * @retval  #ACCOUNT_ERROR_DB_NOT_OPENED      Account database did not opened
  *
- * @pre  This function requires an open connection to an account service by account_connect().
- *
  * @see account_connect()
  * @see account_insert_to_db()
  * @see account_delete_from_db_by_id()
@@ -68,7 +66,7 @@ extern "C"
  * @see account_update_to_db_by_id()
  * @see account_update_to_db_by_user_name()
  */
-int account_delete_from_db_by_package_name_without_permission(const char *package_name);
+int account_delete_from_db_by_package_name_offline(const char *package_name);
 
 /**
  * @internal
