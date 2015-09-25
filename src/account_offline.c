@@ -25,6 +25,10 @@
 #include <vconf.h>
 #include <account_free.h>
 #include <unistd.h>
+#include <sys/stat.h>
+#include <tzplatform_config.h>
+#include <sys/types.h>
+#include <pwd.h>
 
 #include "account-private.h"
 #include "account_internal.h"
@@ -39,60 +43,284 @@
 #define ACCOUNT_DB_OPEN_READONLY 0
 #define ACCOUNT_DB_OPEN_READWRITE 1
 
+#define OWNER_ROOT 0
+#define GLOBAL_USER tzplatform_getuid(TZ_SYS_GLOBALAPP_USER)
+#define APP_GID 100
+#define MIN_USER_UID 5000
+
 typedef sqlite3_stmt* account_stmt;
 
 static sqlite3* g_hAccountDB = NULL;
 static int		g_refCntDB = 0;
 pthread_mutex_t account_mutex = PTHREAD_MUTEX_INITIALIZER;
 
-static const char *_account_db_err_msg()
+static int _account_user_db_close(sqlite3 *hAccountDB);
+static int _account_get_record_count(sqlite3 *hAccountDB, char* query);
+static int _account_execute_query(sqlite3 *hAccountDB, const char *query);
+
+static const char *_account_db_err_msg(sqlite3 *hAccountDB)
 {
-	return sqlite3_errmsg(g_hAccountDB);
+	ACCOUNT_RETURN_VAL((hAccountDB != NULL), {}, ACCOUNT_ERROR_DB_NOT_OPENED, ("The database isn't connected."));
+
+	return sqlite3_errmsg(hAccountDB);
 }
 
-static int _account_db_err_code()
+static int _account_db_err_code(sqlite3 *hAccountDB)
 {
-	return sqlite3_errcode(g_hAccountDB);
+	ACCOUNT_RETURN_VAL((hAccountDB != NULL), {}, ACCOUNT_ERROR_DB_NOT_OPENED, ("The database isn't connected."));
+
+	return sqlite3_errcode(hAccountDB);
 }
 
-static int _account_db_open(int mode)
+//TODO: Need to enable creating db on the first connect for
+//a) multi-user cases
+//b) to ensure db exist in every connect call
+
+static int _account_create_all_tables(sqlite3 *hAccountDB)
+{
+	int rc = -1;
+	int error_code = ACCOUNT_ERROR_NONE;
+	char	query[ACCOUNT_SQL_LEN_MAX] = {0, };
+
+	ACCOUNT_RETURN_VAL((hAccountDB != NULL), {}, ACCOUNT_ERROR_DB_NOT_OPENED, ("The database isn't connected."));
+
+	_INFO("create all table - BEGIN");
+	ACCOUNT_MEMSET(query, 0, sizeof(query));
+
+	/*Create the account table*/
+	ACCOUNT_SNPRINTF(query, sizeof(query), "select count(*) from sqlite_master where name in ('%s')", ACCOUNT_TABLE);
+	rc = _account_get_record_count(hAccountDB, query);
+	if (rc <= 0) {
+		rc = _account_execute_query(hAccountDB, ACCOUNT_SCHEMA);
+		if(rc == SQLITE_BUSY) return ACCOUNT_ERROR_DATABASE_BUSY;
+		ACCOUNT_RETURN_VAL((SQLITE_OK == rc), {}, ACCOUNT_ERROR_DB_FAILED, ("_account_execute_query(%s) failed(%d, %s).\n", ACCOUNT_SCHEMA, rc, _account_db_err_msg(hAccountDB)));
+
+	}
+
+	/*Create capability table*/
+	ACCOUNT_MEMSET(query, 0, sizeof(query));
+	ACCOUNT_SNPRINTF(query, sizeof(query), "select count(*) from sqlite_master where name in ('%s')", CAPABILITY_TABLE);
+	rc = _account_get_record_count(hAccountDB, query);
+	if (rc <= 0) {
+		rc = _account_execute_query(hAccountDB, CAPABILITY_SCHEMA);
+		if(rc == SQLITE_BUSY) return ACCOUNT_ERROR_DATABASE_BUSY;
+		ACCOUNT_RETURN_VAL((SQLITE_OK == rc), {}, ACCOUNT_ERROR_DB_FAILED, ("_account_execute_query(%s) failed(%d, %s).\n", CAPABILITY_SCHEMA, rc, _account_db_err_msg(hAccountDB)));
+	}
+
+	/* Create account custom table */
+	ACCOUNT_MEMSET(query, 0, sizeof(query));
+	ACCOUNT_SNPRINTF(query, sizeof(query), "select count(*) from sqlite_master where name in ('%s')", ACCOUNT_CUSTOM_TABLE);
+	rc = _account_get_record_count(hAccountDB, query);
+	if (rc <= 0) {
+		rc = _account_execute_query(hAccountDB, ACCOUNT_CUSTOM_SCHEMA);
+		if(rc == SQLITE_BUSY) return ACCOUNT_ERROR_DATABASE_BUSY;
+		ACCOUNT_RETURN_VAL((SQLITE_OK == rc), {}, ACCOUNT_ERROR_DB_FAILED, ("_account_execute_query(%s) failed(%d, %s).\n", query, rc, _account_db_err_msg(hAccountDB)));
+	}
+
+	/* Create account type table */
+	ACCOUNT_MEMSET(query, 0, sizeof(query));
+	ACCOUNT_SNPRINTF(query, sizeof(query), "select count(*) from sqlite_master where name in ('%s')", ACCOUNT_TYPE_TABLE);
+	rc = _account_get_record_count(hAccountDB, query);
+	if (rc <= 0) {
+		rc = _account_execute_query(hAccountDB, ACCOUNT_TYPE_SCHEMA);
+		if(rc == SQLITE_BUSY) return ACCOUNT_ERROR_DATABASE_BUSY;
+		ACCOUNT_RETURN_VAL((SQLITE_OK == rc), {}, ACCOUNT_ERROR_DB_FAILED, ("_account_execute_query(%s) failed(%d, %s).\n", ACCOUNT_TYPE_SCHEMA, rc, _account_db_err_msg(hAccountDB)));
+	}
+
+	/* Create label table */
+	ACCOUNT_MEMSET(query, 0, sizeof(query));
+	ACCOUNT_SNPRINTF(query, sizeof(query), "select count(*) from sqlite_master where name in ('%s')", LABEL_TABLE);
+	rc = _account_get_record_count(hAccountDB, query);
+	if (rc <= 0) {
+		rc = _account_execute_query(hAccountDB, LABEL_SCHEMA);
+		if(rc == SQLITE_BUSY) return ACCOUNT_ERROR_DATABASE_BUSY;
+		ACCOUNT_RETURN_VAL((SQLITE_OK == rc), {}, ACCOUNT_ERROR_DB_FAILED, ("_account_execute_query(%s) failed(%d, %s).\n", LABEL_SCHEMA, rc, _account_db_err_msg(hAccountDB)));
+	}
+
+	/* Create account feature table */
+	ACCOUNT_MEMSET(query, 0, sizeof(query));
+	ACCOUNT_SNPRINTF(query, sizeof(query), "select count(*) from sqlite_master where name in ('%s')", PROVIDER_FEATURE_TABLE);
+	rc = _account_get_record_count(hAccountDB, query);
+	if (rc <= 0) {
+		rc = _account_execute_query(hAccountDB, PROVIDER_FEATURE_SCHEMA);
+		if(rc == SQLITE_BUSY) return ACCOUNT_ERROR_DATABASE_BUSY;
+		ACCOUNT_RETURN_VAL((SQLITE_OK == rc), {}, ACCOUNT_ERROR_DB_FAILED, ("_account_execute_query(%s) failed(%d, %s).\n", PROVIDER_FEATURE_SCHEMA, rc, _account_db_err_msg(hAccountDB)));
+	}
+
+	_INFO("create all table - END");
+	return error_code;
+}
+
+static int _account_check_is_all_table_exists(sqlite3 *hAccountDB)
+{
+	int 	rc = 0;
+	char	query[ACCOUNT_SQL_LEN_MAX] = {0,};
+
+	ACCOUNT_RETURN_VAL((hAccountDB != NULL), {}, ACCOUNT_ERROR_DB_NOT_OPENED, ("The database isn't connected."));
+
+	ACCOUNT_MEMSET(query, 0, sizeof(query));
+	ACCOUNT_SNPRINTF(query, sizeof(query), "select count(*) from sqlite_master where name in ('%s', '%s', '%s', '%s', '%s', '%s')",
+			ACCOUNT_TABLE, CAPABILITY_TABLE, ACCOUNT_CUSTOM_TABLE, ACCOUNT_TYPE_TABLE, LABEL_TABLE, PROVIDER_FEATURE_TABLE);
+	rc = _account_get_record_count(hAccountDB, query);
+
+	if (rc != ACCOUNT_TABLE_TOTAL_COUNT) {
+		ACCOUNT_ERROR("Table count is not matched rc=%d\n", rc);
+	}
+
+	return rc;
+}
+
+static int _account_user_db_open(sqlite3 **p_hAccountDB, int mode, uid_t uid)
 {
 	int  rc = 0;
+	char account_db_dir[256] = {0, };
 	char account_db_path[256] = {0, };
 
-	_INFO( "start to get DB path");
-
+	ACCOUNT_MEMSET(account_db_dir, 0x00, sizeof(account_db_dir));
 	ACCOUNT_MEMSET(account_db_path, 0x00, sizeof(account_db_path));
-	ACCOUNT_SNPRINTF(account_db_path, sizeof(account_db_path), "%s", ACCOUNT_DB_PATH);
+
+	ACCOUNT_GET_USER_DB_PATH(account_db_path, sizeof(account_db_path), uid);
 	_INFO( "account_db_path canonicalized = %s", account_db_path);
 
 	if (!g_hAccountDB) {
-		if(mode == ACCOUNT_DB_OPEN_READWRITE)
+		_account_user_db_close(*p_hAccountDB);
+	}
+	ACCOUNT_GET_USER_DB_DIR(account_db_dir, sizeof(account_db_dir), uid);
+	if ((-1 == access (account_db_dir, F_OK)) && uid != OWNER_ROOT) {
+		mkdir(account_db_dir, 644);
+	}
+
+	if (mode == ACCOUNT_DB_OPEN_READWRITE)
+		rc = db_util_open(account_db_path, p_hAccountDB, DB_UTIL_REGISTER_HOOK_METHOD);
+	else {
+		return ACCOUNT_ERROR_DB_NOT_OPENED;
+	}
+
+	if (_account_db_err_code(*p_hAccountDB) == SQLITE_PERM){
+		ACCOUNT_ERROR( "Access failed(%s)", _account_db_err_msg(*p_hAccountDB));
+		return ACCOUNT_ERROR_PERMISSION_DENIED;
+	}
+
+	if (rc == SQLITE_BUSY) {
+		ACCOUNT_ERROR( "busy handler fail.");
+		return ACCOUNT_ERROR_DATABASE_BUSY;
+	}
+
+	ACCOUNT_RETURN_VAL((rc != SQLITE_PERM), {}, ACCOUNT_ERROR_PERMISSION_DENIED, ("Account permission denied rc : %d", rc));
+	ACCOUNT_RETURN_VAL((rc == SQLITE_OK), {}, ACCOUNT_ERROR_DB_NOT_OPENED, ("The database isn't connected. rc : %d", rc));
+
+	rc = _account_check_is_all_table_exists(*p_hAccountDB);
+
+	if (rc < 0) {
+		_ERR("_account_check_is_all_table_exists rc=[%d]", rc);
+		return rc;
+	} else if (rc == ACCOUNT_TABLE_TOTAL_COUNT) {
+		_INFO("Tables OK rc=[%d]", rc);
+	} else {
+		int ret = _account_create_all_tables(*p_hAccountDB);
+		if (ret != ACCOUNT_ERROR_NONE) {
+			_ERR("_account_create_all_tables fail ret=[%d]", ret);
+			return ret;
+		}
+	}
+
+	return ACCOUNT_ERROR_NONE;
+}
+
+static int _account_global_db_open(int mode)
+{
+	int  rc = 0;
+	char account_db_dir[256] = {0, };
+	char account_db_path[256] = {0, };
+	uid_t uid = -1;
+
+	_INFO( "start to get DB path");
+
+	ACCOUNT_MEMSET(account_db_dir, 0x00, sizeof(account_db_dir));
+	ACCOUNT_MEMSET(account_db_path, 0x00, sizeof(account_db_path));
+
+	uid = getuid();
+	if (uid != OWNER_ROOT && uid != GLOBAL_USER) {
+		ACCOUNT_ERROR("global db open fail. user not both root or global user");
+		return ACCOUNT_ERROR_PERMISSION_DENIED;
+	}
+
+	ACCOUNT_GET_GLOBAL_DB_PATH(account_db_path, sizeof(account_db_path));
+//	else
+//		ACCOUNT_GET_USER_DB_PATH(account_db_path, sizeof(account_db_path), uid);
+	_INFO( "account_db_path canonicalized = %s", account_db_path);
+
+	if (!g_hAccountDB) {
+		ACCOUNT_GET_USER_DB_DIR(account_db_dir, sizeof(account_db_dir), uid);
+		if ((-1 == access (account_db_dir, F_OK)) && uid != OWNER_ROOT) {
+			mkdir(account_db_dir, 644);
+		}
+
+		if (mode == ACCOUNT_DB_OPEN_READWRITE)
 			rc = db_util_open(account_db_path, &g_hAccountDB, DB_UTIL_REGISTER_HOOK_METHOD);
-		else if(mode == ACCOUNT_DB_OPEN_READONLY)
-			rc = db_util_open_with_options(account_db_path, &g_hAccountDB, SQLITE_OPEN_READONLY, NULL);
 		else {
 			return ACCOUNT_ERROR_DB_NOT_OPENED;
 		}
 
-		if( _account_db_err_code() == SQLITE_PERM ){
-			ACCOUNT_ERROR( "Access failed(%s)", _account_db_err_msg());
+		if (_account_db_err_code(g_hAccountDB) == SQLITE_PERM){
+			ACCOUNT_ERROR( "Access failed(%s)", _account_db_err_msg(g_hAccountDB));
 			return ACCOUNT_ERROR_PERMISSION_DENIED;
+		}
+
+		if (rc == SQLITE_BUSY) {
+			ACCOUNT_ERROR( "busy handler fail.");
+			return ACCOUNT_ERROR_DATABASE_BUSY;
 		}
 
 		ACCOUNT_RETURN_VAL((rc != SQLITE_PERM), {}, ACCOUNT_ERROR_PERMISSION_DENIED, ("Account permission denied rc : %d", rc));
 		ACCOUNT_RETURN_VAL((rc == SQLITE_OK), {}, ACCOUNT_ERROR_DB_NOT_OPENED, ("The database isn't connected. rc : %d", rc));
+
+		rc = _account_check_is_all_table_exists(g_hAccountDB);
+
+		if (rc < 0) {
+			_ERR("_account_check_is_all_table_exists rc=[%d]", rc);
+			return rc;
+		} else if (rc == ACCOUNT_TABLE_TOTAL_COUNT) {
+			_INFO("Tables OK rc=[%d]", rc);
+		} else {
+			int ret = _account_create_all_tables(g_hAccountDB);
+			if (ret != ACCOUNT_ERROR_NONE) {
+				_ERR("_account_create_all_tables fail ret=[%d]", ret);
+				return ret;
+			}
+		}
+
 		g_refCntDB++;
 	} else {
 		g_refCntDB++;
 	}
 
-	ACCOUNT_RETURN_VAL((rc == SQLITE_OK), {}, ACCOUNT_ERROR_DB_NOT_OPENED, ("busy handler fail. rc : %d", rc));
-
 	return ACCOUNT_ERROR_NONE;
 }
 
-static int _account_db_close(void)
+static int _account_user_db_close(sqlite3 *hAccountDB)
+{
+	int rc = 0;
+	int ret = ACCOUNT_ERROR_DB_FAILED;
+
+	if (hAccountDB) {
+		rc = db_util_close(hAccountDB);
+		if(  rc == SQLITE_PERM ){
+			ACCOUNT_ERROR( "Access failed(SQLITE_PERM)");
+			return ACCOUNT_ERROR_PERMISSION_DENIED;
+		} else if ( rc == SQLITE_BUSY ){
+			ACCOUNT_ERROR( "database busy");
+			return ACCOUNT_ERROR_DATABASE_BUSY;
+		}
+		ACCOUNT_RETURN_VAL((rc == SQLITE_OK), {}, ACCOUNT_ERROR_DB_FAILED, ("The database isn't connected. rc : %d", rc));
+		hAccountDB = NULL;
+		ret = ACCOUNT_ERROR_NONE;
+	}
+
+	return ret;
+}
+
+static int _account_global_db_close(void)
 {
 	int rc = 0;
 	int ret = -1;
@@ -122,22 +350,24 @@ static int _account_db_close(void)
 	return ret;
 }
 
-static int _account_execute_query(const char *query)
+static int _account_execute_query(sqlite3 *hAccountDB, const char *query)
 {
 	int rc = -1;
 	char* pszErrorMsg = NULL;
+
+	ACCOUNT_RETURN_VAL((hAccountDB != NULL), {}, ACCOUNT_ERROR_DB_NOT_OPENED, ("The database isn't connected."));
 
 	if(!query){
 		ACCOUNT_ERROR("NULL query\n");
 		return ACCOUNT_ERROR_QUERY_SYNTAX_ERROR;
 	}
 
-	if(!g_hAccountDB){
+	if(!hAccountDB){
 		ACCOUNT_ERROR("DB is not opened\n");
 		return ACCOUNT_ERROR_DB_NOT_OPENED;
 	}
 
-	rc = sqlite3_exec(g_hAccountDB, query, NULL, NULL, &pszErrorMsg);
+	rc = sqlite3_exec(hAccountDB, query, NULL, NULL, &pszErrorMsg);
 	if (SQLITE_OK != rc) {
 		ACCOUNT_ERROR("sqlite3_exec rc(%d) query(%s) failed(%s).", rc, query, pszErrorMsg);
 		sqlite3_free(pszErrorMsg);
@@ -146,12 +376,14 @@ static int _account_execute_query(const char *query)
 	return rc;
 }
 
-static int _account_begin_transaction(void)
+static int _account_begin_transaction(sqlite3 *hAccountDB)
 {
 	ACCOUNT_DEBUG("_account_begin_transaction start");
 	int ret = -1;
 
-	ret = _account_execute_query("BEGIN IMMEDIATE TRANSACTION");
+	ACCOUNT_RETURN_VAL((hAccountDB != NULL), {}, ACCOUNT_ERROR_DB_NOT_OPENED, ("The database isn't connected."));
+
+	ret = _account_execute_query(hAccountDB, "BEGIN IMMEDIATE TRANSACTION");
 
 	if (ret == SQLITE_BUSY){
 		ACCOUNT_ERROR(" sqlite3 busy = %d", ret);
@@ -165,17 +397,19 @@ static int _account_begin_transaction(void)
 	return ACCOUNT_ERROR_NONE;
 }
 
-static int _account_end_transaction(bool is_success)
+static int _account_end_transaction(sqlite3 *hAccountDB, bool is_success)
 {
 	ACCOUNT_DEBUG("_account_end_transaction start");
 
 	int ret = -1;
 
+	ACCOUNT_RETURN_VAL((hAccountDB != NULL), {}, ACCOUNT_ERROR_DB_NOT_OPENED, ("The database isn't connected."));
+
 	if (is_success == true) {
-		ret = _account_execute_query("COMMIT TRANSACTION");
+		ret = _account_execute_query(hAccountDB, "COMMIT TRANSACTION");
 		ACCOUNT_DEBUG("_account_end_transaction COMMIT");
 	} else {
-		ret = _account_execute_query("ROLLBACK TRANSACTION");
+		ret = _account_execute_query(hAccountDB, "ROLLBACK TRANSACTION");
 		ACCOUNT_DEBUG("_account_end_transaction ROLLBACK");
 	}
 
@@ -198,7 +432,7 @@ static int _account_end_transaction(bool is_success)
 	return ACCOUNT_ERROR_NONE;
 }
 
-static int _account_get_record_count(char* query)
+static int _account_get_record_count(sqlite3 *hAccountDB, char* query)
 {
 	_INFO("_account_get_record_count");
 
@@ -206,35 +440,37 @@ static int _account_get_record_count(char* query)
 	int ncount = 0;
 	account_stmt pStmt = NULL;
 
+	ACCOUNT_RETURN_VAL((hAccountDB != NULL), {}, ACCOUNT_ERROR_DB_NOT_OPENED, ("The database isn't connected."));
+
 	if(!query){
 		_ERR("NULL query\n");
 		return ACCOUNT_ERROR_QUERY_SYNTAX_ERROR;
 	}
 
-	if(!g_hAccountDB){
+	if(!hAccountDB){
 		_ERR("DB is not opened\n");
 		return ACCOUNT_ERROR_DB_NOT_OPENED;
 	}
 
-	rc = sqlite3_prepare_v2(g_hAccountDB, query, strlen(query), &pStmt, NULL);
+	rc = sqlite3_prepare_v2(hAccountDB, query, strlen(query), &pStmt, NULL);
 
 	if (SQLITE_BUSY == rc){
-		_ERR("sqlite3_prepare_v2() failed(%d, %s).", rc, _account_db_err_msg());
+		_ERR("sqlite3_prepare_v2() failed(%d, %s).", rc, _account_db_err_msg(hAccountDB));
 		sqlite3_finalize(pStmt);
 		return ACCOUNT_ERROR_DATABASE_BUSY;
 	} else if (SQLITE_OK != rc) {
-		_ERR("sqlite3_prepare_v2() failed(%d, %s).", rc, _account_db_err_msg());
+		_ERR("sqlite3_prepare_v2() failed(%d, %s).", rc, _account_db_err_msg(hAccountDB));
 		sqlite3_finalize(pStmt);
 		return ACCOUNT_ERROR_DB_FAILED;
 	}
 
 	rc = sqlite3_step(pStmt);
 	if (SQLITE_BUSY == rc) {
-		_ERR("sqlite3_step() failed(%d, %s).", rc, _account_db_err_msg());
+		_ERR("sqlite3_step() failed(%d, %s).", rc, _account_db_err_msg(hAccountDB));
 		sqlite3_finalize(pStmt);
 		return ACCOUNT_ERROR_DATABASE_BUSY;
 	} else if (SQLITE_ROW != rc) {
-		_ERR("sqlite3_step() failed(%d, %s).", rc, _account_db_err_msg());
+		_ERR("sqlite3_step() failed(%d, %s).", rc, _account_db_err_msg(hAccountDB));
 		sqlite3_finalize(pStmt);
 		return ACCOUNT_ERROR_DB_FAILED;
 	}
@@ -312,17 +548,18 @@ static int _account_type_convert_account_to_sql(account_type_s *account_type, ac
 	return count;
 }
 
-static gboolean _account_type_check_duplicated(account_type_s *data)
+static gboolean _account_type_check_duplicated(sqlite3 *hAccountDB, account_type_s *data)
 {
 	char query[ACCOUNT_SQL_LEN_MAX] = {0, };
 	int count = 0;
 
-	ACCOUNT_MEMSET(query, 0x00, sizeof(query));
+	ACCOUNT_RETURN_VAL((hAccountDB != NULL), {}, ACCOUNT_ERROR_DB_NOT_OPENED, ("The database isn't connected."));
 
+	ACCOUNT_MEMSET(query, 0x00, sizeof(query));
 	ACCOUNT_SNPRINTF(query, sizeof(query), "SELECT COUNT(*) FROM %s WHERE AppId='%s'"
 			, ACCOUNT_TYPE_TABLE, data->app_id);
 
-	count = _account_get_record_count(query);
+	count = _account_get_record_count(hAccountDB, query);
 	if (count > 0) {
 		return TRUE;
 	}
@@ -344,7 +581,8 @@ static int _account_query_finalize(account_stmt pStmt)
 		ACCOUNT_ERROR(" sqlite3 busy = %d", rc);
 		return ACCOUNT_ERROR_DATABASE_BUSY;
 	} else if (rc != SQLITE_OK) {
-		ACCOUNT_ERROR( "sqlite3_finalize fail, rc : %d, db_error : %s\n", rc, _account_db_err_msg());
+//		ACCOUNT_ERROR( "sqlite3_finalize fail, rc : %d, db_error : %s\n", rc, _account_db_err_msg(hAccountDB));
+		ACCOUNT_ERROR( "sqlite3_finalize fail, rc : %d\n", rc);
 		return ACCOUNT_ERROR_DB_FAILED;
 	}
 
@@ -361,32 +599,35 @@ static int _account_query_step(account_stmt pStmt)
 	return sqlite3_step(pStmt);
 }
 
-static account_stmt _account_prepare_query(char *query)
+static account_stmt _account_prepare_query(sqlite3 *hAccountDB, char *query)
 {
 	int 			rc = -1;
 	account_stmt 	pStmt = NULL;
 
+	ACCOUNT_RETURN_VAL((hAccountDB != NULL), {}, ACCOUNT_ERROR_DB_NOT_OPENED, ("The database isn't connected."));
 	ACCOUNT_RETURN_VAL((query != NULL), {}, NULL, ("query is NULL"));
 
-	rc = sqlite3_prepare_v2(g_hAccountDB, query, strlen(query), &pStmt, NULL);
+	rc = sqlite3_prepare_v2(hAccountDB, query, strlen(query), &pStmt, NULL);
 
-	ACCOUNT_RETURN_VAL((SQLITE_OK == rc), {}, NULL, ("sqlite3_prepare_v2(%s) failed(%s).", query, _account_db_err_msg()));
+	ACCOUNT_RETURN_VAL((SQLITE_OK == rc), {}, NULL, ("sqlite3_prepare_v2(%s) failed(%s).", query, _account_db_err_msg(hAccountDB)));
 
 	return pStmt;
 }
 
-static int _account_get_next_sequence(const char *pszName)
+static int _account_get_next_sequence(sqlite3 *hAccountDB, const char *pszName)
 {
 	int 			rc = 0;
 	account_stmt	pStmt = NULL;
 	int 			max_seq = 0;
 	char 			szQuery[ACCOUNT_SQL_LEN_MAX] = {0,};
 
+	ACCOUNT_RETURN_VAL((hAccountDB != NULL), {}, ACCOUNT_ERROR_DB_NOT_OPENED, ("The database isn't connected."));
+
 	ACCOUNT_MEMSET(szQuery, 0x00, sizeof(szQuery));
 	ACCOUNT_SNPRINTF(szQuery, sizeof(szQuery),  "SELECT max(seq) FROM %s where name = '%s' ", ACCOUNT_SQLITE_SEQ, pszName);
-	rc = sqlite3_prepare_v2(g_hAccountDB, szQuery, strlen(szQuery), &pStmt, NULL);
+	rc = sqlite3_prepare_v2(hAccountDB, szQuery, strlen(szQuery), &pStmt, NULL);
 	if (SQLITE_OK != rc) {
-		ACCOUNT_SLOGE("sqlite3_prepare_v2() failed(%d, %s).", rc, _account_db_err_msg());
+		ACCOUNT_SLOGE("sqlite3_prepare_v2() failed(%d, %s).", rc, _account_db_err_msg(hAccountDB));
 		sqlite3_finalize(pStmt);
 		return ACCOUNT_ERROR_DB_FAILED;
 	}
@@ -402,12 +643,13 @@ static int _account_get_next_sequence(const char *pszName)
 	return max_seq;
 }
 
-static int _account_type_insert_provider_feature(account_type_s *account_type, const char* app_id)
+static int _account_type_insert_provider_feature(sqlite3 *hAccountDB, account_type_s *account_type, const char* app_id)
 {
 	int 			rc, count = 1;
 	char			query[ACCOUNT_SQL_LEN_MAX] = {0, };
 	account_stmt 	hstmt = NULL;
 
+	ACCOUNT_RETURN_VAL((hAccountDB != NULL), {}, ACCOUNT_ERROR_DB_NOT_OPENED, ("The database isn't connected."));
 	ACCOUNT_RETURN_VAL((account_type != NULL), {}, ACCOUNT_ERROR_INVALID_PARAMETER, ("ACCOUNT HANDLE IS NULL"));
 	ACCOUNT_RETURN_VAL((app_id != NULL), {}, ACCOUNT_ERROR_INVALID_PARAMETER, ("APP ID IS NULL"));
 
@@ -418,15 +660,15 @@ static int _account_type_insert_provider_feature(account_type_s *account_type, c
 
 	ACCOUNT_SNPRINTF(query, sizeof(query), "SELECT COUNT(*) from %s where AppId='%s'", ACCOUNT_TYPE_TABLE, app_id);
 
-	rc = _account_get_record_count(query);
+	rc = _account_get_record_count(hAccountDB, query);
 
-	if( _account_db_err_code() == SQLITE_PERM ){
-		ACCOUNT_ERROR( "Access failed(%s)", _account_db_err_msg());
+	if( _account_db_err_code(hAccountDB) == SQLITE_PERM ){
+		ACCOUNT_ERROR( "Access failed(%s)", _account_db_err_msg(hAccountDB));
 		return ACCOUNT_ERROR_PERMISSION_DENIED;
 	}
 
 	if (rc <= 0) {
-		ACCOUNT_SLOGI( "related account type item is not existed rc=%d , %s", rc, _account_db_err_msg());
+		ACCOUNT_SLOGI( "related account type item is not existed rc=%d , %s", rc, _account_db_err_msg(hAccountDB));
 		return ACCOUNT_ERROR_RECORD_NOT_FOUND;
 	}
 
@@ -441,9 +683,9 @@ static int _account_type_insert_provider_feature(account_type_s *account_type, c
 		ACCOUNT_SNPRINTF(query, sizeof(query), "INSERT INTO %s(app_id, key) VALUES "
 				"(?, ?) ", PROVIDER_FEATURE_TABLE);
 
-		hstmt = _account_prepare_query(query);
+		hstmt = _account_prepare_query(hAccountDB, query);
 
-		ACCOUNT_RETURN_VAL((hstmt != NULL), {}, ACCOUNT_ERROR_DB_FAILED, ("_account_prepare_query() failed(%s).\n", _account_db_err_msg()));
+		ACCOUNT_RETURN_VAL((hstmt != NULL), {}, ACCOUNT_ERROR_DB_FAILED, ("_account_prepare_query() failed(%s).\n", _account_db_err_msg(hAccountDB)));
 
 		provider_feature_s* feature_data = NULL;
 		feature_data = (provider_feature_s*)iter->data;
@@ -456,7 +698,7 @@ static int _account_type_insert_provider_feature(account_type_s *account_type, c
 		rc = _account_query_step(hstmt);
 
 		if (rc != SQLITE_DONE) {
-			ACCOUNT_ERROR( "_account_query_step() failed(%d, %s)", rc, _account_db_err_msg());
+			ACCOUNT_ERROR( "_account_query_step() failed(%d, %s)", rc, _account_db_err_msg(hAccountDB));
 			break;
 		}
 
@@ -469,12 +711,13 @@ static int _account_type_insert_provider_feature(account_type_s *account_type, c
 	return ACCOUNT_ERROR_NONE;
 }
 
-static int _account_type_insert_label(account_type_s *account_type)
+static int _account_type_insert_label(sqlite3 *hAccountDB, account_type_s *account_type)
 {
 	int 			rc, count = 1;
 	char			query[ACCOUNT_SQL_LEN_MAX] = {0, };
 	account_stmt 	hstmt = NULL;
 
+	ACCOUNT_RETURN_VAL((hAccountDB != NULL), {}, ACCOUNT_ERROR_DB_NOT_OPENED, ("The database isn't connected."));
 	ACCOUNT_RETURN_VAL((account_type != NULL), {}, ACCOUNT_ERROR_INVALID_PARAMETER, ("ACCOUNT HANDLE IS NULL"));
 
 	if (g_slist_length( account_type->label_list)==0) {
@@ -484,10 +727,10 @@ static int _account_type_insert_label(account_type_s *account_type)
 
 	ACCOUNT_SNPRINTF(query, sizeof(query), "SELECT COUNT(*) from %s where AppId = '%s'", ACCOUNT_TYPE_TABLE, account_type->app_id);
 
-	rc = _account_get_record_count(query);
+	rc = _account_get_record_count(hAccountDB, query);
 
-	if( _account_db_err_code() == SQLITE_PERM ){
-		ACCOUNT_ERROR( "Access failed(%s)", _account_db_err_msg());
+	if( _account_db_err_code(hAccountDB) == SQLITE_PERM ) {
+		ACCOUNT_ERROR( "Access failed(%s)", _account_db_err_msg(hAccountDB));
 		return ACCOUNT_ERROR_PERMISSION_DENIED;
 	}
 
@@ -505,9 +748,9 @@ static int _account_type_insert_label(account_type_s *account_type)
 		ACCOUNT_SNPRINTF(query, sizeof(query), "INSERT INTO %s(AppId, Label, Locale) VALUES "
 				"(?, ?, ?) ", LABEL_TABLE);
 
-		hstmt = _account_prepare_query(query);
+		hstmt = _account_prepare_query(hAccountDB, query);
 
-		ACCOUNT_RETURN_VAL((hstmt != NULL), {}, ACCOUNT_ERROR_DB_FAILED, ("_account_prepare_query() failed(%s).\n", _account_db_err_msg()));
+		ACCOUNT_RETURN_VAL((hstmt != NULL), {}, ACCOUNT_ERROR_DB_FAILED, ("_account_prepare_query() failed(%s).\n", _account_db_err_msg(hAccountDB)));
 
 		label_s* label_data = NULL;
 		label_data = (label_s*)iter->data;
@@ -522,7 +765,7 @@ static int _account_type_insert_label(account_type_s *account_type)
 		rc = _account_query_step(hstmt);
 
 		if (rc != SQLITE_DONE) {
-			ACCOUNT_ERROR( "_account_query_step() failed(%d, %s)", rc, _account_db_err_msg());
+			ACCOUNT_ERROR( "_account_query_step() failed(%d, %s)", rc, _account_db_err_msg(hAccountDB));
 			break;
 		}
 
@@ -535,7 +778,7 @@ static int _account_type_insert_label(account_type_s *account_type)
 	return ACCOUNT_ERROR_NONE;
 }
 
-static int _account_type_execute_insert_query(account_type_s *account_type)
+static int _account_type_execute_insert_query(sqlite3 *hAccountDB, account_type_s *account_type)
 {
 	_INFO("");
 
@@ -544,6 +787,7 @@ static int _account_type_execute_insert_query(account_type_s *account_type)
 	int				error_code = ACCOUNT_ERROR_NONE;
 	account_stmt 	hstmt = NULL;
 
+	ACCOUNT_RETURN_VAL((hAccountDB != NULL), {}, ACCOUNT_ERROR_DB_NOT_OPENED, ("The database isn't connected."));
 	/* check mandatory field */
 	// app id & service provider id
 	if (!account_type->app_id) {
@@ -555,18 +799,18 @@ static int _account_type_execute_insert_query(account_type_s *account_type)
 			"(?, ?, ?, ?, ?)",	ACCOUNT_TYPE_TABLE);
 
 	_INFO("");
-	hstmt = _account_prepare_query(query);
+	hstmt = _account_prepare_query(hAccountDB, query);
 	_INFO("");
 
-	if( _account_db_err_code() == SQLITE_PERM ){
-		ACCOUNT_ERROR( "Access failed(%s)", _account_db_err_msg());
+	if( _account_db_err_code(hAccountDB) == SQLITE_PERM ){
+		ACCOUNT_ERROR( "Access failed(%s)", _account_db_err_msg(hAccountDB));
 		return ACCOUNT_ERROR_PERMISSION_DENIED;
-	} else if( _account_db_err_code() == SQLITE_BUSY ){
-		ACCOUNT_ERROR( "Database Busy(%s)", _account_db_err_msg());
+	} else if( _account_db_err_code(hAccountDB) == SQLITE_BUSY ){
+		ACCOUNT_ERROR( "Database Busy(%s)", _account_db_err_msg(hAccountDB));
 		return ACCOUNT_ERROR_DATABASE_BUSY;
 	}
 
-	ACCOUNT_RETURN_VAL((hstmt != NULL), {}, ACCOUNT_ERROR_DB_FAILED, ("_account_prepare_query() failed(%s).\n", _account_db_err_msg()));
+	ACCOUNT_RETURN_VAL((hstmt != NULL), {}, ACCOUNT_ERROR_DB_FAILED, ("_account_prepare_query() failed(%s).\n", _account_db_err_msg(hAccountDB)));
 
 	_INFO("");
 	_account_type_convert_account_to_sql(account_type, hstmt, query);
@@ -574,10 +818,10 @@ static int _account_type_execute_insert_query(account_type_s *account_type)
 
 	rc = _account_query_step(hstmt);
 	if (rc == SQLITE_BUSY) {
-		ACCOUNT_ERROR( "account_db_query_step() failed(%d, %s)", rc, _account_db_err_msg());
+		ACCOUNT_ERROR( "account_db_query_step() failed(%d, %s)", rc, _account_db_err_msg(hAccountDB));
 		error_code = ACCOUNT_ERROR_DATABASE_BUSY;
 	} else if (rc != SQLITE_DONE) {
-		ACCOUNT_ERROR( "account_db_query_step() failed(%d, %s)", rc, _account_db_err_msg());
+		ACCOUNT_ERROR( "account_db_query_step() failed(%d, %s)", rc, _account_db_err_msg(hAccountDB));
 		error_code = ACCOUNT_ERROR_DB_FAILED;
 	}
 
@@ -590,13 +834,13 @@ static int _account_type_execute_insert_query(account_type_s *account_type)
 	return error_code;
 }
 
-int _account_type_insert_to_db(account_type_s* account_type, int* account_type_id)
+static int _account_type_insert_to_db(sqlite3 *hAccountDB, account_type_s* account_type, int* account_type_id)
 {
 	_INFO("");
 
 	int		error_code = ACCOUNT_ERROR_NONE, ret_transaction = 0;
 
-	ACCOUNT_RETURN_VAL((g_hAccountDB != NULL), {}, ACCOUNT_ERROR_DB_NOT_OPENED, ("The database isn't connected."));
+	ACCOUNT_RETURN_VAL((hAccountDB != NULL), {}, ACCOUNT_ERROR_DB_NOT_OPENED, ("The database isn't connected."));
 	ACCOUNT_RETURN_VAL((account_type != NULL), {}, ACCOUNT_ERROR_INVALID_PARAMETER, ("ACCOUNT TYPE HANDLE IS NULL"));
 	ACCOUNT_RETURN_VAL((account_type_id != NULL), {}, ACCOUNT_ERROR_INVALID_PARAMETER, ("ACCOUNT TYPE ID POINTER IS NULL"));
 
@@ -606,19 +850,19 @@ int _account_type_insert_to_db(account_type_s* account_type, int* account_type_i
 
 
 	/* transaction control required*/
-	ret_transaction = _account_begin_transaction();
+	ret_transaction = _account_begin_transaction(hAccountDB);
 
 	_INFO("");
 
-	if( _account_db_err_code() == SQLITE_PERM ){
+	if( _account_db_err_code(hAccountDB) == SQLITE_PERM ){
 		pthread_mutex_unlock(&account_mutex);
-		ACCOUNT_ERROR( "Access failed(%s)", _account_db_err_msg());
+		ACCOUNT_ERROR( "Access failed(%s)", _account_db_err_msg(hAccountDB));
 		return ACCOUNT_ERROR_PERMISSION_DENIED;
 	}
 
 	_INFO("");
 	if( ret_transaction == ACCOUNT_ERROR_DATABASE_BUSY ){
-		ACCOUNT_ERROR( "database busy(%s)", _account_db_err_msg());
+		ACCOUNT_ERROR( "database busy(%s)", _account_db_err_msg(hAccountDB));
 		pthread_mutex_unlock(&account_mutex);
 		return ACCOUNT_ERROR_DATABASE_BUSY;
 	} else if (ret_transaction != ACCOUNT_ERROR_NONE) {
@@ -628,22 +872,22 @@ int _account_type_insert_to_db(account_type_s* account_type, int* account_type_i
 	}
 
 	_INFO("");
-	if (_account_type_check_duplicated(data)) {
+	if (_account_type_check_duplicated(hAccountDB, data)) {
 		_INFO("");
-		ret_transaction = _account_end_transaction(FALSE);
+		ret_transaction = _account_end_transaction(hAccountDB, FALSE);
 		ACCOUNT_ERROR("Duplicated, rollback insert query(%x)!!!!\n", ret_transaction);
 		*account_type_id = -1;
 		pthread_mutex_unlock(&account_mutex);
 		return ACCOUNT_ERROR_DUPLICATED;
 	} else {
 		_INFO("");
-		*account_type_id = _account_get_next_sequence(ACCOUNT_TYPE_TABLE);
+		*account_type_id = _account_get_next_sequence(hAccountDB, ACCOUNT_TYPE_TABLE);
 
-		error_code = _account_type_execute_insert_query(data);
+		error_code = _account_type_execute_insert_query(hAccountDB, data);
 
 		if (error_code != ACCOUNT_ERROR_NONE){
 			error_code = ACCOUNT_ERROR_DUPLICATED;
-			ret_transaction = _account_end_transaction(FALSE);
+			ret_transaction = _account_end_transaction(hAccountDB, FALSE);
 			ACCOUNT_ERROR("Insert fail, rollback insert query(%x)!!!!\n", ret_transaction);
 			*account_type_id = -1;
 			pthread_mutex_unlock(&account_mutex);
@@ -652,25 +896,25 @@ int _account_type_insert_to_db(account_type_s* account_type, int* account_type_i
 	}
 
 	_INFO("");
-	error_code = _account_type_insert_provider_feature(data, data->app_id);
+	error_code = _account_type_insert_provider_feature(hAccountDB, data, data->app_id);
 	if(error_code != ACCOUNT_ERROR_NONE) {
 		_INFO("");
-		ret_transaction = _account_end_transaction(FALSE);
+		ret_transaction = _account_end_transaction(hAccountDB, FALSE);
 		ACCOUNT_ERROR("Insert provider feature fail(%x), rollback insert query(%x)!!!!\n", error_code, ret_transaction);
 		pthread_mutex_unlock(&account_mutex);
 		return error_code;
 	}
 	_INFO("");
-	error_code = _account_type_insert_label(data);
+	error_code = _account_type_insert_label(hAccountDB, data);
 	if(error_code != ACCOUNT_ERROR_NONE) {
 		_INFO("");
-		ret_transaction = _account_end_transaction(FALSE);
+		ret_transaction = _account_end_transaction(hAccountDB, FALSE);
 		ACCOUNT_ERROR("Insert label fail(%x), rollback insert query(%x)!!!!\n", error_code, ret_transaction);
 		pthread_mutex_unlock(&account_mutex);
 		return error_code;
 	}
 
-	ret_transaction = _account_end_transaction(TRUE);
+	ret_transaction = _account_end_transaction(hAccountDB, TRUE);
 	_INFO("");
 	pthread_mutex_unlock(&account_mutex);
 
@@ -678,7 +922,7 @@ int _account_type_insert_to_db(account_type_s* account_type, int* account_type_i
 	return ACCOUNT_ERROR_NONE;
 }
 
-int _account_type_delete_by_app_id(const char* app_id)
+static int _account_type_delete_by_app_id(sqlite3 *hAccountDB, const char* app_id)
 {
 	int 			error_code = ACCOUNT_ERROR_NONE;
 	account_stmt	hstmt = NULL;
@@ -688,16 +932,16 @@ int _account_type_delete_by_app_id(const char* app_id)
 	int				binding_count = 1;
 	bool			is_success = FALSE;
 
-	ACCOUNT_RETURN_VAL((g_hAccountDB != NULL), {}, ACCOUNT_ERROR_DB_NOT_OPENED, ("The database isn't connected."));
+	ACCOUNT_RETURN_VAL((hAccountDB != NULL), {}, ACCOUNT_ERROR_DB_NOT_OPENED, ("The database isn't connected."));
 	ACCOUNT_RETURN_VAL((app_id != NULL), {}, ACCOUNT_ERROR_INVALID_PARAMETER, ("The database isn't connected."));
 
 	/* Check requested ID to delete */
 	ACCOUNT_SNPRINTF(query, sizeof(query), "SELECT COUNT(*) FROM %s WHERE AppId = '%s'", ACCOUNT_TYPE_TABLE, app_id);
 
-	count = _account_get_record_count(query);
+	count = _account_get_record_count(hAccountDB, query);
 
-	if( _account_db_err_code() == SQLITE_PERM ){
-		ACCOUNT_ERROR( "Access failed(%s)", _account_db_err_msg());
+	if( _account_db_err_code(hAccountDB) == SQLITE_PERM ){
+		ACCOUNT_ERROR( "Access failed(%s)", _account_db_err_msg(hAccountDB));
 		return ACCOUNT_ERROR_PERMISSION_DENIED;
 	}
 
@@ -707,10 +951,10 @@ int _account_type_delete_by_app_id(const char* app_id)
 	}
 
 	/* transaction control required*/
-	ret_transaction = _account_begin_transaction();
+	ret_transaction = _account_begin_transaction(hAccountDB);
 
 	if( ret_transaction == ACCOUNT_ERROR_DATABASE_BUSY ){
-		ACCOUNT_ERROR( "database busy(%s)", _account_db_err_msg());
+		ACCOUNT_ERROR( "database busy(%s)", _account_db_err_msg(hAccountDB));
 		pthread_mutex_unlock(&account_mutex);
 		return ACCOUNT_ERROR_DATABASE_BUSY;
 	}else if (ret_transaction != ACCOUNT_ERROR_NONE) {
@@ -721,16 +965,16 @@ int _account_type_delete_by_app_id(const char* app_id)
 
 	ACCOUNT_SNPRINTF(query, sizeof(query), "DELETE FROM %s WHERE AppId = ?", LABEL_TABLE);
 
-	hstmt = _account_prepare_query(query);
+	hstmt = _account_prepare_query(hAccountDB, query);
 
-	if( _account_db_err_code() == SQLITE_PERM ){
-		ACCOUNT_ERROR( "Access failed(%s)", _account_db_err_msg());
+	if( _account_db_err_code(hAccountDB) == SQLITE_PERM ) {
+		ACCOUNT_ERROR( "Access failed(%s)", _account_db_err_msg(hAccountDB));
 		pthread_mutex_unlock(&account_mutex);
 		return ACCOUNT_ERROR_PERMISSION_DENIED;
 	}
 
 	ACCOUNT_CATCH_ERROR(hstmt != NULL, {}, ACCOUNT_ERROR_DB_FAILED,
-			("_account_svc_query_prepare(%s) failed(%s).\n", query, _account_db_err_msg()));
+			("_account_svc_query_prepare(%s) failed(%s).\n", query, _account_db_err_msg(hAccountDB)));
 
 	_account_query_bind_text(hstmt, binding_count++, app_id);
 
@@ -746,9 +990,9 @@ int _account_type_delete_by_app_id(const char* app_id)
 
 	ACCOUNT_SNPRINTF(query, sizeof(query), "DELETE FROM %s WHERE app_id = ? ", PROVIDER_FEATURE_TABLE);
 
-	hstmt = _account_prepare_query(query);
+	hstmt = _account_prepare_query(hAccountDB, query);
 	ACCOUNT_CATCH_ERROR(hstmt != NULL, {}, ACCOUNT_ERROR_DB_FAILED,
-			("_account_svc_query_prepare(%s) failed(%s).\n", query, _account_db_err_msg()));
+			("_account_svc_query_prepare(%s) failed(%s).\n", query, _account_db_err_msg(hAccountDB)));
 
 	_account_query_bind_text(hstmt, binding_count++, app_id);
 
@@ -766,9 +1010,9 @@ int _account_type_delete_by_app_id(const char* app_id)
 
 	ACCOUNT_SNPRINTF(query, sizeof(query), "DELETE FROM %s WHERE AppId = ? ", ACCOUNT_TYPE_TABLE);
 
-	hstmt = _account_prepare_query(query);
+	hstmt = _account_prepare_query(hAccountDB, query);
 	ACCOUNT_CATCH_ERROR(hstmt != NULL, {}, ACCOUNT_ERROR_DB_FAILED,
-			("_account_svc_query_prepare(%s) failed(%s).\n", query, _account_db_err_msg()));
+			("_account_svc_query_prepare(%s) failed(%s).\n", query, _account_db_err_msg(hAccountDB)));
 
 	_account_query_bind_text(hstmt, binding_count++, app_id);
 
@@ -781,14 +1025,14 @@ int _account_type_delete_by_app_id(const char* app_id)
 
 	hstmt = NULL;
 
-	CATCH:
+CATCH:
 	if (hstmt != NULL) {
 		rc = _account_query_finalize(hstmt);
 		ACCOUNT_RETURN_VAL((rc == ACCOUNT_ERROR_NONE), {}, rc, ("finalize error"));
 		hstmt = NULL;
 	}
 
-	ret_transaction = _account_end_transaction(is_success);
+	ret_transaction = _account_end_transaction(hAccountDB, is_success);
 
 	if (ret_transaction != ACCOUNT_ERROR_NONE) {
 		ACCOUNT_ERROR("account_svc_delete:_account_svc_end_transaction fail %d, is_success=%d\n", ret_transaction, is_success);
@@ -813,23 +1057,23 @@ ACCOUNT_INTERNAL_API int account_type_insert_to_db_offline(account_type_h accoun
 	guint pid = getpid();
 	_INFO("client Id = [%u]", pid);
 
-	int return_code = _account_db_open(1);
+	int return_code = _account_global_db_open(1);
 	if (return_code != ACCOUNT_ERROR_NONE)
 	{
-		_ERR("_account_db_open() error, ret = %d", return_code);
+		_ERR("_account_global_db_open() error, ret = %d", return_code);
 
 		goto RETURN;
 	}
 
-	int uid = getuid();
-	if (uid != 0)
+	uid_t uid = getuid();
+	if (uid != OWNER_ROOT && uid != GLOBAL_USER)
 	{
-		_ERR("current daemon is not root user, uid=%d", uid);
+		_ERR("current process is not root user nor global user, uid=%d", uid);
 		goto RETURN;
 	}
 
 	_INFO("before _account_type_insert_to_db");
-	return_code = _account_type_insert_to_db((account_type_s*)account_type, &db_id);
+	return_code = _account_type_insert_to_db(g_hAccountDB, (account_type_s*)account_type, &db_id);
 	_INFO("after _account_type_insert_to_db");
 	if (return_code != ACCOUNT_ERROR_NONE)
 	{
@@ -848,11 +1092,11 @@ RETURN:
 	if( g_hAccountDB == NULL )
 		return return_code;
 
-	return_code = _account_db_close();
+	return_code = _account_global_db_close();
 	if (return_code != ACCOUNT_ERROR_NONE)
 	{
-		ACCOUNT_DEBUG("_account_db_close() fail[%d]", return_code);
-		return_code = ACCOUNT_ERROR_DB_FAILED;
+		ACCOUNT_DEBUG("_account_global_db_close() fail[%d]", return_code);
+//		return_code = ACCOUNT_ERROR_DB_FAILED;
 	}
 
 	return return_code;
@@ -868,23 +1112,23 @@ ACCOUNT_INTERNAL_API int account_type_delete_by_app_id_offline(const char* app_i
 
 	_INFO("client Id = [%u]", pid);
 
-	int return_code = _account_db_open(1);
+	int return_code = _account_global_db_open(1);
 	if (return_code != ACCOUNT_ERROR_NONE)
 	{
-		_ERR("_account_db_open() error, ret = %d", return_code);
+		_ERR("_account_global_db_open() error, ret = %d", return_code);
 
 		goto RETURN;
 	}
 
-	int uid = getuid();
-	if (uid != 0)
+	uid_t uid = getuid();
+	if (uid != OWNER_ROOT && uid != GLOBAL_USER)
 	{
 		_ERR("current daemon is not root user, uid=%d", uid);
 		goto RETURN;
 	}
 
 	_INFO("before _account_type_delete_by_app_id");
-	return_code = _account_type_delete_by_app_id(app_id);
+	return_code = _account_type_delete_by_app_id(g_hAccountDB, app_id);
 	_INFO("after _account_type_delete_by_app_id=[%d]", return_code);
 
 	if (return_code != ACCOUNT_ERROR_NONE)
@@ -899,11 +1143,11 @@ RETURN:
 	if( g_hAccountDB == NULL )
 		return return_code;
 
-	return_code = _account_db_close();
+	return_code = _account_global_db_close();
 	if (return_code != ACCOUNT_ERROR_NONE)
 	{
-		ACCOUNT_DEBUG("_account_db_close() fail[%d]", return_code);
-		return_code = ACCOUNT_ERROR_DB_FAILED;
+		ACCOUNT_DEBUG("_account_global_db_close() fail[%d]", return_code);
+//		return_code = ACCOUNT_ERROR_DB_FAILED;
 	}
 
 	return return_code;
@@ -1008,7 +1252,7 @@ static void _account_convert_column_to_account(account_stmt hstmt, account_s *ac
 	account_record->user_data_int[4] = _account_query_table_column_int(hstmt, ACCOUNT_FIELD_USER_INT_4);
 }
 
-GList* _account_query_account_by_package_name(const char* package_name, int *error_code)
+static GList* _account_query_account_by_package_name(sqlite3 *hAccountDB, const char* package_name, int *error_code)
 {
 	_INFO("_account_query_account_by_package_name");
 
@@ -1017,17 +1261,18 @@ GList* _account_query_account_by_package_name(const char* package_name, int *err
 	char			query[ACCOUNT_SQL_LEN_MAX] = {0, };
 	int 			rc = 0;
 
+	ACCOUNT_RETURN_VAL((hAccountDB != NULL), {*error_code = ACCOUNT_ERROR_DB_NOT_OPENED;}, ACCOUNT_ERROR_DB_NOT_OPENED, ("The database isn't connected."));
 	ACCOUNT_RETURN_VAL((package_name != NULL), {*error_code = ACCOUNT_ERROR_INVALID_PARAMETER;}, NULL, ("PACKAGE NAME IS NULL"));
-	ACCOUNT_RETURN_VAL((g_hAccountDB != NULL), {*error_code = ACCOUNT_ERROR_DB_NOT_OPENED;}, NULL, ("The database isn't connected."));
+	ACCOUNT_RETURN_VAL((error_code != NULL), {*error_code = ACCOUNT_ERROR_INVALID_PARAMETER;}, NULL, ("error_code pointer is NULL."));
 
 	ACCOUNT_MEMSET(query, 0x00, ACCOUNT_SQL_LEN_MAX);
 
 	ACCOUNT_SNPRINTF(query, sizeof(query), "SELECT * FROM %s WHERE package_name=?", ACCOUNT_TABLE);
 
-	hstmt = _account_prepare_query(query);
+	hstmt = _account_prepare_query(hAccountDB, query);
 
-	if( _account_db_err_code() == SQLITE_PERM ){
-		ACCOUNT_ERROR( "Access failed(%s)", _account_db_err_msg());
+	if( _account_db_err_code(hAccountDB) == SQLITE_PERM ) {
+		ACCOUNT_ERROR( "Access failed(%s)", _account_db_err_msg(hAccountDB));
 		*error_code = ACCOUNT_ERROR_PERMISSION_DENIED;
 		return NULL;
 	}
@@ -1135,7 +1380,7 @@ static void _account_insert_delete_update_notification_send(char *noti_name, int
 	}
 }
 
-int _account_delete_from_db_by_package_name_offline(const char *package_name)
+static int _account_delete_from_db_by_package_name_offline(sqlite3 *hAccountDB, const char *package_name)
 {
 	int 			error_code = ACCOUNT_ERROR_NONE;
 	account_stmt	hstmt = NULL;
@@ -1147,16 +1392,12 @@ int _account_delete_from_db_by_package_name_offline(const char *package_name)
 	GSList			*account_id_list = NULL;
 	int				ret = -1;
 
-	// It only needs list of ids, does not need to query sensitive info. So sending 0
-	GList* account_list_temp = _account_query_account_by_package_name(package_name, &ret);
-	if (account_list_temp == NULL)
-	{
-		_ERR("_account_query_account_by_package_name returned NULL");
-		return ACCOUNT_ERROR_DB_FAILED;
-	}
+	ACCOUNT_RETURN_VAL((hAccountDB != NULL), {error_code = ACCOUNT_ERROR_DB_NOT_OPENED;}, ACCOUNT_ERROR_DB_NOT_OPENED, ("The database isn't connected."));
 
-	if( _account_db_err_code() == SQLITE_PERM ){
-		ACCOUNT_ERROR( "Access failed(%s)", _account_db_err_msg());
+	// It only needs list of ids, does not need to query sensitive info. So sending 0
+	GList* account_list_temp = _account_query_account_by_package_name(hAccountDB, package_name, &ret);
+	if( _account_db_err_code(hAccountDB) == SQLITE_PERM ){
+		ACCOUNT_ERROR( "Access failed(%s)", _account_db_err_msg(hAccountDB));
 		_account_glist_account_free(account_list_temp);
 		return ACCOUNT_ERROR_PERMISSION_DENIED;
 	}
@@ -1164,6 +1405,12 @@ int _account_delete_from_db_by_package_name_offline(const char *package_name)
 	if(ret != ACCOUNT_ERROR_NONE){
 		_account_glist_account_free(account_list_temp);
 		return ret;
+	}
+
+	if (account_list_temp == NULL)
+	{
+		_ERR("_account_query_account_by_package_name returned NULL");
+		return ACCOUNT_ERROR_DB_FAILED;
 	}
 
 	account_list_temp = g_list_first(account_list_temp);
@@ -1192,16 +1439,16 @@ int _account_delete_from_db_by_package_name_offline(const char *package_name)
 
 	_account_glist_account_free(account_list_temp);
 	/* transaction control required*/
-	ret_transaction = _account_begin_transaction();
+	ret_transaction = _account_begin_transaction(hAccountDB);
 
-	if( _account_db_err_code() == SQLITE_PERM ){
+	if( _account_db_err_code(hAccountDB) == SQLITE_PERM ){
 		pthread_mutex_unlock(&account_mutex);
-		ACCOUNT_ERROR( "Access failed(%s)", _account_db_err_msg());
+		ACCOUNT_ERROR( "Access failed(%s)", _account_db_err_msg(hAccountDB));
 		return ACCOUNT_ERROR_PERMISSION_DENIED;
 	}
 
 	if( ret_transaction == ACCOUNT_ERROR_DATABASE_BUSY ){
-		ACCOUNT_ERROR( "database busy(%s)", _account_db_err_msg());
+		ACCOUNT_ERROR( "database busy(%s)", _account_db_err_msg(hAccountDB));
 		pthread_mutex_unlock(&account_mutex);
 		return ACCOUNT_ERROR_DATABASE_BUSY;
 	}else if (ret_transaction != ACCOUNT_ERROR_NONE) {
@@ -1214,17 +1461,17 @@ int _account_delete_from_db_by_package_name_offline(const char *package_name)
 	ACCOUNT_MEMSET(query, 0, sizeof(query));
 	ACCOUNT_SNPRINTF(query, sizeof(query), "DELETE FROM %s WHERE AppId = ?", ACCOUNT_CUSTOM_TABLE);
 
-	hstmt = _account_prepare_query(query);
+	hstmt = _account_prepare_query(hAccountDB, query);
 
-	if( _account_db_err_code() == SQLITE_PERM ){
-		_account_end_transaction(FALSE);
+	if( _account_db_err_code(hAccountDB) == SQLITE_PERM ){
+		_account_end_transaction(hAccountDB, FALSE);
 		pthread_mutex_unlock(&account_mutex);
-		ACCOUNT_ERROR( "Access failed(%s)", _account_db_err_msg());
+		ACCOUNT_ERROR( "Access failed(%s)", _account_db_err_msg(hAccountDB));
 		return ACCOUNT_ERROR_PERMISSION_DENIED;
 	}
 
 	ACCOUNT_CATCH_ERROR(hstmt != NULL, {}, ACCOUNT_ERROR_DB_FAILED,
-			("_account_svc_query_prepare(%s) failed(%s).\n", query, _account_db_err_msg()));
+			("_account_svc_query_prepare(%s) failed(%s).\n", query, _account_db_err_msg(hAccountDB)));
 
 	binding_count = 1;
 	_account_query_bind_text(hstmt, binding_count++, package_name);
@@ -1240,10 +1487,10 @@ int _account_delete_from_db_by_package_name_offline(const char *package_name)
 	ACCOUNT_MEMSET(query, 0, sizeof(query));
 	ACCOUNT_SNPRINTF(query, sizeof(query), "DELETE FROM %s WHERE package_name = ?", CAPABILITY_TABLE);
 
-	hstmt = _account_prepare_query(query);
+	hstmt = _account_prepare_query(hAccountDB, query);
 
 	ACCOUNT_CATCH_ERROR(hstmt != NULL, {}, ACCOUNT_ERROR_DB_FAILED,
-			("_account_svc_query_prepare(%s) failed(%s).\n", query, _account_db_err_msg()));
+			("_account_svc_query_prepare(%s) failed(%s).\n", query, _account_db_err_msg(hAccountDB)));
 
 	binding_count = 1;
 	_account_query_bind_text(hstmt, binding_count++, package_name);
@@ -1260,9 +1507,9 @@ int _account_delete_from_db_by_package_name_offline(const char *package_name)
 
 	ACCOUNT_SNPRINTF(query, sizeof(query), "DELETE FROM %s WHERE package_name = ?", ACCOUNT_TABLE);
 
-	hstmt = _account_prepare_query(query);
+	hstmt = _account_prepare_query(hAccountDB, query);
 	ACCOUNT_CATCH_ERROR(hstmt != NULL, {}, ACCOUNT_ERROR_DB_FAILED,
-			("_account_svc_query_prepare(%s) failed(%s).\n", query, _account_db_err_msg()));
+			("_account_svc_query_prepare(%s) failed(%s).\n", query, _account_db_err_msg(hAccountDB)));
 
 	binding_count = 1;
 	_account_query_bind_text(hstmt, binding_count++, package_name);
@@ -1283,7 +1530,7 @@ CATCH:
 		hstmt = NULL;
 	}
 
-	ret_transaction = _account_end_transaction(is_success);
+	ret_transaction = _account_end_transaction(hAccountDB, is_success);
 
 	if (ret_transaction != ACCOUNT_ERROR_NONE) {
 		ACCOUNT_ERROR("account_delete:_account_end_transaction fail %d, is_success=%d\n", ret_transaction, is_success);
@@ -1312,47 +1559,51 @@ CATCH:
 ACCOUNT_INTERNAL_API int account_delete_from_db_by_package_name_offline(const char *package_name)
 {
 	_INFO("_account_delete_from_db_by_package_name_offline");
+	uid_t uid = -1;
+	uid_t gid = -1;
+	int return_code = ACCOUNT_ERROR_NONE;
+	struct passwd *user_pw = NULL;
 
 	ACCOUNT_RETURN_VAL((package_name != NULL), {}, ACCOUNT_ERROR_INVALID_PARAMETER, ("package_name is null!"));
 
-	int return_code = _account_db_open(1);
-	if (return_code != ACCOUNT_ERROR_NONE)
-	{
-		_ERR("_account_db_open() error, ret = %d", return_code);
-
-		goto RETURN;
-	}
-
-	int uid = getuid();
-	if (uid != 0)
-	{
+	uid = getuid();
+	if (uid != 0) {
 		_ERR("current process user is not root, uid=%d", uid);
 		return_code = ACCOUNT_ERROR_PERMISSION_DENIED;
 		goto RETURN;
 	}
+	gid = getgid();
 
-	_INFO("before _account_delete_from_db_by_package_name_offline");
-	return_code = _account_delete_from_db_by_package_name_offline(package_name);
-	_INFO("after _account_delete_from_db_by_package_name_offline=[%d]", return_code);
+	setpwent();
+	while ((user_pw = getpwent()) != NULL) {
+		uid = user_pw->pw_uid;
+		_INFO("user_pw->pw_uid=[%d]", uid);
+		if (uid > MIN_USER_UID && gid == APP_GID ) {
+			sqlite3 *hAccountDB = NULL;
+			return_code = _account_user_db_open(&hAccountDB, 1, uid);
+			if (return_code != ACCOUNT_ERROR_NONE)
+			{
+				ACCOUNT_DEBUG("_account_user_db_open() error, ret=[%d]", return_code);
+			}
 
-	if (return_code != ACCOUNT_ERROR_NONE)
-	{
-		_ERR("_account_delete_from_db_by_package_name_offline error");
-		goto RETURN;
+			return_code = _account_delete_from_db_by_package_name_offline(hAccountDB, package_name);
+			if (return_code != ACCOUNT_ERROR_NONE)
+			{
+				ACCOUNT_DEBUG("_account_delete_from_db_by_package_name_offline error=[%d]", return_code);
+			}
+
+			return_code = _account_user_db_close(hAccountDB);
+			if (return_code != ACCOUNT_ERROR_NONE)
+			{
+				ACCOUNT_DEBUG("_account_user_db_close() fail[%d]", return_code);
+			}
+		}
 	}
+	endpwent();
 
+	return_code = ACCOUNT_ERROR_NONE;
 RETURN:
 	_INFO("account_delete_from_db_by_package_name_offline end");
-
-	if( g_hAccountDB == NULL )
-		return return_code;
-
-	return_code = _account_db_close();
-	if (return_code != ACCOUNT_ERROR_NONE)
-	{
-		ACCOUNT_DEBUG("_account_db_close() fail[%d]", return_code);
-		return_code = ACCOUNT_ERROR_DB_FAILED;
-	}
 
 	return return_code;
 }
