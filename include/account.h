@@ -1642,10 +1642,10 @@ int account_type_query_label_by_app_id(account_label_cb callback, const char* ap
  * @brief  Retrieves the account provider information with your application ID.
  *
  * @since_tizen 2.3
- * @privlevel   public
- * @privilege   %http://tizen.org/privilege/account.read
- * @param[in]   app_id        The application ID to search
- * @param[out]  account_type  The account handle which is created by account_type_create()
+ * @privlevel     public
+ * @privilege     %http://tizen.org/privilege/account.read
+ * @param[in]     app_id        The application ID to search
+ * @param[in/out] account_type  The account handle which has to be created by account_type_create() before calling this function and released by account_type_destroy() after calling this function.
  *
  * @return  @c 0 on success,
  *          otherwise a negative error value
