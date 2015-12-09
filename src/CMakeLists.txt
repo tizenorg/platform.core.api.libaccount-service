@@ -15,7 +15,6 @@ pkg_check_modules(clientpkgs REQUIRED
 		vconf
 		account-common
 		db-util
-		libtzplatform-config
 )
 
 FOREACH(flag ${clientpkgs_CFLAGS})
