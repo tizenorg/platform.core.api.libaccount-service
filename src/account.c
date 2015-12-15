@@ -383,12 +383,6 @@ ACCOUNT_API int account_delete_from_db_by_package_name(const char *package_name)
 	return _account_delete_from_db_by_package_name(package_name, true);
 }
 
-ACCOUNT_INTERNAL_API int account_delete_from_db_by_package_name_without_permission(const char *package_name)
-{
-	_INFO("account_delete_from_db_by_package_name starting without permission");
-	return _account_delete_from_db_by_package_name(package_name, false);
-}
-
 ACCOUNT_API int account_update_to_db_by_id(account_h account, int account_id)
 {
 	//First we will update account db
@@ -559,11 +553,11 @@ ACCOUNT_API int account_create(account_h *account)
 	}
 
 	account_s *data = (account_s*)malloc(sizeof(account_s));
-
 	if (data == NULL) {
 		ACCOUNT_FATAL("Memory Allocation Failed");
 		return ACCOUNT_ERROR_OUT_OF_MEMORY;
 	}
+
 	ACCOUNT_MEMSET(data, 0, sizeof(account_s));
 
 	/*Setting account as visible by default*/
@@ -615,6 +609,10 @@ ACCOUNT_API int account_set_user_name(account_h account, const char *user_name)
 
 	_ACCOUNT_FREE(data->user_name);
 	data->user_name = _account_get_text(user_name);
+	if (data->user_name == NULL) {
+		ACCOUNT_FATAL("OUT OF MEMORY\n");
+		return ACCOUNT_ERROR_OUT_OF_MEMORY;
+	}
 
 	return ACCOUNT_ERROR_NONE;
 }
@@ -635,6 +633,10 @@ ACCOUNT_API int account_set_display_name(account_h account, const char *display_
 
 	_ACCOUNT_FREE(data->display_name);
 	data->display_name = _account_get_text(display_name);
+	if (data->display_name == NULL) {
+		ACCOUNT_FATAL("OUT OF MEMORY\n");
+		return ACCOUNT_ERROR_OUT_OF_MEMORY;
+	}
 
 	return ACCOUNT_ERROR_NONE;
 }
@@ -655,6 +657,10 @@ ACCOUNT_API int account_set_email_address(account_h account, const char *email_a
 
 	_ACCOUNT_FREE(data->email_address);
 	data->email_address = _account_get_text(email_address);
+	if (data->email_address == NULL) {
+		ACCOUNT_FATAL("OUT OF MEMORY\n");
+		return ACCOUNT_ERROR_OUT_OF_MEMORY;
+	}
 
 	return ACCOUNT_ERROR_NONE;
 }
@@ -675,6 +681,10 @@ ACCOUNT_API int account_set_icon_path(account_h account, const char *icon_path)
 
 	_ACCOUNT_FREE(data->icon_path);
 	data->icon_path = _account_get_text(icon_path);
+	if (data->icon_path == NULL) {
+		ACCOUNT_FATAL("OUT OF MEMORY\n");
+		return ACCOUNT_ERROR_OUT_OF_MEMORY;
+	}
 
 	return ACCOUNT_ERROR_NONE;
 }
@@ -694,6 +704,10 @@ ACCOUNT_API int account_set_source(account_h account, const char *source)
 
 	_ACCOUNT_FREE(data->source);
 	data->source = _account_get_text(source);
+	if (data->source == NULL) {
+		ACCOUNT_FATAL("OUT OF MEMORY\n");
+		return ACCOUNT_ERROR_OUT_OF_MEMORY;
+	}
 
 	return ACCOUNT_ERROR_NONE;
 }
@@ -714,6 +728,10 @@ ACCOUNT_API int account_set_package_name(account_h account, const char *package_
 
 	_ACCOUNT_FREE(data->package_name);
 	data->package_name = _account_get_text(package_name);
+	if (data->package_name == NULL) {
+		ACCOUNT_FATAL("OUT OF MEMORY\n");
+		return ACCOUNT_ERROR_OUT_OF_MEMORY;
+	}
 
 	return ACCOUNT_ERROR_NONE;
 }
@@ -733,6 +751,10 @@ ACCOUNT_API int account_set_domain_name(account_h account, const char *domain_na
 
 	_ACCOUNT_FREE(data->domain_name);
 	data->domain_name = _account_get_text(domain_name);
+	if (data->domain_name == NULL) {
+		ACCOUNT_FATAL("OUT OF MEMORY\n");
+		return ACCOUNT_ERROR_OUT_OF_MEMORY;
+	}
 
 	return ACCOUNT_ERROR_NONE;
 }
@@ -753,6 +775,10 @@ ACCOUNT_API int account_set_access_token(account_h account, const char *access_t
 
 	_ACCOUNT_FREE(data->access_token);
 	data->access_token = _account_get_text(access_token);
+	if (data->access_token == NULL) {
+		ACCOUNT_FATAL("OUT OF MEMORY\n");
+		return ACCOUNT_ERROR_OUT_OF_MEMORY;
+	}
 
 	return ACCOUNT_ERROR_NONE;
 }
@@ -777,6 +803,10 @@ ACCOUNT_API int account_set_user_text(account_h account, int idx, const char *us
 
 	_ACCOUNT_FREE(data->user_data_txt[idx]);
 	data->user_data_txt[idx] = _account_get_text(user_txt);
+	if (data->user_data_txt[idx] == NULL) {
+		ACCOUNT_FATAL("OUT OF MEMORY\n");
+		return ACCOUNT_ERROR_OUT_OF_MEMORY;
+	}
 
 	return ACCOUNT_ERROR_NONE;
 }
@@ -810,23 +840,59 @@ ACCOUNT_API int account_set_custom(account_h account, const char* key, const cha
 		ACCOUNT_SLOGD( "account_custom_s->key = %s, account_custom_s->value = %s \n", custom_data->key, custom_data->value);
 
 		if(!strcmp(custom_data->key, key)) {
+			char *new_value = NULL;
+			new_value = _account_get_text(value);
+			if (new_value == NULL) {
+				ACCOUNT_FATAL("OUT OF MEMORY\n");
+				return ACCOUNT_ERROR_OUT_OF_MEMORY;
+			}
+
 			_ACCOUNT_FREE(custom_data->value);
-			custom_data->value = _account_get_text(value);
+			custom_data->value = new_value;
+
 			b_is_new = FALSE;
 		}
 	}
 
 	if(b_is_new) {
-		account_custom_s* custom_data = (account_custom_s*)malloc(sizeof(account_custom_s));
+		int error_code = ACCOUNT_ERROR_NONE;
 
+		account_custom_s* custom_data = (account_custom_s*)malloc(sizeof(account_custom_s));
 		if (custom_data == NULL) {
+			ACCOUNT_FATAL("Memory Allocation Failed");
 			return ACCOUNT_ERROR_OUT_OF_MEMORY;
 		}
+
 		ACCOUNT_MEMSET(custom_data, 0, sizeof(account_custom_s));
 		custom_data->account_id = data->id;
-		custom_data->app_id = _account_get_text(data->package_name);
+
+		/* custom's app_id field will be automatically filled by account-svc daemon. */
+/*		custom_data->app_id = _account_get_text(data->package_name);
+		if (data->package_name != NULL && custom_data->app_id == NULL) {
+			ACCOUNT_FATAL("OUT OF MEMORY\n");
+			error_code = ACCOUNT_ERROR_OUT_OF_MEMORY;
+		}
+*/
 		custom_data->key = _account_get_text(key);
+		if (custom_data->key == NULL) {
+			ACCOUNT_FATAL("OUT OF MEMORY\n");
+			error_code = ACCOUNT_ERROR_OUT_OF_MEMORY;
+		}
+
 		custom_data->value = _account_get_text(value);
+		if (custom_data->value == NULL) {
+			ACCOUNT_FATAL("OUT OF MEMORY\n");
+			error_code = ACCOUNT_ERROR_OUT_OF_MEMORY;
+		}
+
+		if (error_code != ACCOUNT_ERROR_NONE) {
+			_ACCOUNT_FREE(custom_data->app_id);
+			_ACCOUNT_FREE(custom_data->key);
+			_ACCOUNT_FREE(custom_data->value);
+			_ACCOUNT_FREE(custom_data);
+			return error_code;
+		}
+
 		data->custom_list = g_slist_append(data->custom_list, (gpointer)custom_data);
 	}
 
@@ -922,12 +988,21 @@ ACCOUNT_API int account_set_capability(account_h account, const char* capability
 
 	if(b_is_new) {
 		account_capability_s* cap_data = (account_capability_s*)malloc(sizeof(account_capability_s));
-
-		if (cap_data == NULL)
+		if (cap_data == NULL) {
+			ACCOUNT_FATAL("Memory Allocation Failed");
 			return ACCOUNT_ERROR_OUT_OF_MEMORY;
+		}
+
 		ACCOUNT_MEMSET(cap_data, 0, sizeof(account_capability_s));
 
 		cap_data->type = _account_get_text(capability_type);
+		if (cap_data->type == NULL) {
+			ACCOUNT_FATAL("OUT OF MEMORY\n");
+			_ACCOUNT_FREE(cap_data->type);
+			_ACCOUNT_FREE(cap_data);
+			return ACCOUNT_ERROR_OUT_OF_MEMORY;
+		}
+
 		cap_data->value = capability_value;
 		data->capablity_list = g_slist_append(data->capablity_list, (gpointer)cap_data);
 	}
@@ -949,6 +1024,10 @@ ACCOUNT_API int account_get_user_name(account_h account, char **user_name)
 
 	(*user_name) = NULL;
 	*user_name = _account_get_text(data->user_name);
+	if (data->user_name != NULL && *user_name == NULL) {
+		ACCOUNT_FATAL("OUT OF MEMORY\n");
+		return ACCOUNT_ERROR_OUT_OF_MEMORY;
+	}
 
 	return ACCOUNT_ERROR_NONE;
 }
@@ -968,6 +1047,11 @@ ACCOUNT_API int account_get_display_name(account_h account, char **display_name)
 	(*display_name) = NULL;
 
 	*display_name = _account_get_text(data->display_name);
+	if (data->display_name != NULL && *display_name == NULL) {
+		ACCOUNT_FATAL("OUT OF MEMORY\n");
+		return ACCOUNT_ERROR_OUT_OF_MEMORY;
+	}
+
 
 	return ACCOUNT_ERROR_NONE;
 }
@@ -987,6 +1071,10 @@ ACCOUNT_API int account_get_email_address(account_h account,char **email_address
 	(*email_address) = NULL;
 
 	*email_address = _account_get_text(data->email_address);
+	if (data->email_address != NULL && *email_address == NULL) {
+		ACCOUNT_FATAL("OUT OF MEMORY\n");
+		return ACCOUNT_ERROR_OUT_OF_MEMORY;
+	}
 
 	return ACCOUNT_ERROR_NONE;
 }
@@ -1006,6 +1094,10 @@ ACCOUNT_API int  account_get_icon_path(account_h account, char **icon_path)
 	(*icon_path) = NULL;
 
 	*icon_path = _account_get_text(data->icon_path);
+	if (data->icon_path != NULL && *icon_path == NULL) {
+		ACCOUNT_FATAL("OUT OF MEMORY\n");
+		return ACCOUNT_ERROR_OUT_OF_MEMORY;
+	}
 
 	return ACCOUNT_ERROR_NONE;
 }
@@ -1025,6 +1117,10 @@ ACCOUNT_API int account_get_source(account_h account, char **source)
 	(*source) = NULL;
 
 	*source = _account_get_text(data->source);
+	if (data->source != NULL && *source == NULL) {
+		ACCOUNT_FATAL("OUT OF MEMORY\n");
+		return ACCOUNT_ERROR_OUT_OF_MEMORY;
+	}
 
 	return ACCOUNT_ERROR_NONE;
 }
@@ -1044,6 +1140,11 @@ ACCOUNT_API int account_get_package_name(account_h account, char **package_name)
 	(*package_name) = NULL;
 
 	*package_name = _account_get_text(data->package_name);
+	if (data->package_name != NULL && *package_name == NULL) {
+		ACCOUNT_FATAL("OUT OF MEMORY\n");
+		return ACCOUNT_ERROR_OUT_OF_MEMORY;
+	}
+
 
 	return ACCOUNT_ERROR_NONE;
 }
@@ -1063,6 +1164,10 @@ ACCOUNT_API int account_get_domain_name(account_h account, char **domain_name)
 	(*domain_name) = NULL;
 
 	*domain_name = _account_get_text(data->domain_name);
+	if (data->domain_name != NULL && *domain_name == NULL) {
+		ACCOUNT_FATAL("OUT OF MEMORY\n");
+		return ACCOUNT_ERROR_OUT_OF_MEMORY;
+	}
 
 	return ACCOUNT_ERROR_NONE;
 }
@@ -1082,6 +1187,10 @@ ACCOUNT_API int account_get_access_token(account_h account, char **access_token)
 	(*access_token) = NULL;
 
 	*access_token = _account_get_text(data->access_token);
+	if (data->access_token != NULL && *access_token == NULL) {
+		ACCOUNT_FATAL("OUT OF MEMORY\n");
+		return ACCOUNT_ERROR_OUT_OF_MEMORY;
+	}
 
 	return ACCOUNT_ERROR_NONE;
 }
@@ -1095,6 +1204,7 @@ ACCOUNT_API int account_get_user_text(account_h account, int user_text_index, ch
 	if (!text) {
 		return ACCOUNT_ERROR_INVALID_PARAMETER;
 	}
+
 	ACCOUNT_RETURN_VAL((user_text_index >=0 && user_text_index < USER_TXT_CNT ), {}, ACCOUNT_ERROR_INVALID_PARAMETER, ("INVALID USER TEXT INDEX"));
 
 	account_s *data = (account_s*)account;
@@ -1102,6 +1212,10 @@ ACCOUNT_API int account_get_user_text(account_h account, int user_text_index, ch
 	(*text) = NULL;
 
 	*text = _account_get_text(data->user_data_txt[user_text_index]);
+	if (data->user_data_txt[user_text_index] != NULL && *text == NULL) {
+		ACCOUNT_FATAL("OUT OF MEMORY\n");
+		return ACCOUNT_ERROR_OUT_OF_MEMORY;
+	}
 
 	return ACCOUNT_ERROR_NONE;
 }
@@ -1250,6 +1364,11 @@ ACCOUNT_API int account_get_custom(account_h account, const char* key, char** va
 		if(!strcmp(key, custom_data->key)) {
 			(*value) = NULL;
 			*value = _account_get_text(custom_data->value);
+			if (custom_data->value != NULL && *value == NULL) {
+				ACCOUNT_FATAL("OUT OF MEMORY\n");
+				return ACCOUNT_ERROR_OUT_OF_MEMORY;
+			}
+
 			return ACCOUNT_ERROR_NONE;
 		}
 	}
@@ -1859,10 +1978,8 @@ ACCOUNT_API int account_type_create(account_type_h *account_type)
 	}
 
 	account_type_s *data = (account_type_s*)malloc(sizeof(account_type_s));
-
-	if (data == NULL)
-	{
-		ACCOUNT_ERROR("Memory Allocation Failed");
+	if (data == NULL) {
+		ACCOUNT_FATAL("Memory Allocation Failed");
 		return ACCOUNT_ERROR_OUT_OF_MEMORY;
 	}
 
@@ -1916,6 +2033,10 @@ ACCOUNT_INTERNAL_API int account_type_set_app_id(account_type_h account_type, co
 
 	_ACCOUNT_FREE(data->app_id);
 	data->app_id = _account_get_text(app_id);
+	if (data->app_id == NULL) {
+		ACCOUNT_FATAL("OUT OF MEMORY\n");
+		return ACCOUNT_ERROR_OUT_OF_MEMORY;
+	}
 
 	return ACCOUNT_ERROR_NONE;
 }
@@ -1934,6 +2055,10 @@ ACCOUNT_INTERNAL_API int account_type_set_service_provider_id(account_type_h acc
 
 	_ACCOUNT_FREE(data->service_provider_id);
 	data->service_provider_id = _account_get_text(service_provider_id);
+	if (data->service_provider_id == NULL) {
+		ACCOUNT_FATAL("OUT OF MEMORY\n");
+		return ACCOUNT_ERROR_OUT_OF_MEMORY;
+	}
 
 	return ACCOUNT_ERROR_NONE;
 }
@@ -1952,6 +2077,10 @@ ACCOUNT_INTERNAL_API int account_type_set_icon_path(account_type_h account_type,
 
 	_ACCOUNT_FREE(data->icon_path);
 	data->icon_path = _account_get_text(icon_path);
+	if (data->icon_path == NULL) {
+		ACCOUNT_FATAL("OUT OF MEMORY\n");
+		return ACCOUNT_ERROR_OUT_OF_MEMORY;
+	}
 
 	return ACCOUNT_ERROR_NONE;
 }
@@ -1970,6 +2099,10 @@ ACCOUNT_INTERNAL_API int account_type_set_small_icon_path(account_type_h account
 
 	_ACCOUNT_FREE(data->small_icon_path);
 	data->small_icon_path = _account_get_text(small_icon_path);
+	if (data->small_icon_path == NULL) {
+		ACCOUNT_FATAL("OUT OF MEMORY\n");
+		return ACCOUNT_ERROR_OUT_OF_MEMORY;
+	}
 
 	return ACCOUNT_ERROR_NONE;
 }
@@ -1998,14 +2131,25 @@ ACCOUNT_INTERNAL_API int account_type_set_label(account_type_h account_type, con
 
 	account_type_s *data = (account_type_s*)account_type;
 	label_s *label_data = (label_s*)malloc(sizeof(label_s));
-
 	if (label_data == NULL) {
+		ACCOUNT_FATAL("Memory Allocation Failed");
 		return ACCOUNT_ERROR_OUT_OF_MEMORY;
 	}
+
 	ACCOUNT_MEMSET(label_data, 0, sizeof(label_s));
 
 	label_data->label = _account_get_text(label);
+	if (label_data->label == NULL) {
+		ACCOUNT_FATAL("OUT OF MEMORY\n");
+		return ACCOUNT_ERROR_OUT_OF_MEMORY;
+	}
+
 	label_data->locale = _account_get_text(locale);
+	if (label_data->locale == NULL) {
+		ACCOUNT_FATAL("OUT OF MEMORY\n");
+		_ACCOUNT_FREE(label_data->label);
+		return ACCOUNT_ERROR_OUT_OF_MEMORY;
+	}
 
 	data->label_list = g_slist_append(data->label_list, (gpointer)label_data);
 
@@ -2034,12 +2178,20 @@ ACCOUNT_INTERNAL_API int account_type_set_provider_feature(account_type_h accoun
 
 	if(b_is_new) {
 		provider_feature_s* feature_data = (provider_feature_s*)malloc(sizeof(provider_feature_s));
-
-		if (feature_data == NULL)
+		if (feature_data == NULL) {
+			ACCOUNT_FATAL("Memory Allocation Failed");
 			return ACCOUNT_ERROR_OUT_OF_MEMORY;
+		}
+
 		ACCOUNT_MEMSET(feature_data, 0, sizeof(provider_feature_s));
 
 		feature_data->key = _account_get_text(provider_feature);
+		if (feature_data->key == NULL) {
+			ACCOUNT_FATAL("OUT OF MEMORY\n");
+			_ACCOUNT_FREE(feature_data);
+			return ACCOUNT_ERROR_OUT_OF_MEMORY;
+		}
+
 		data->provider_feature_list = g_slist_append(data->provider_feature_list, (gpointer)feature_data);
 	}
 
@@ -2157,6 +2309,10 @@ ACCOUNT_API int account_type_get_app_id(account_type_h account_type, char **app_
 
 	(*app_id) = NULL;
 	*app_id = _account_get_text(data->app_id);
+	if (*app_id == NULL) {
+		ACCOUNT_FATAL("OUT OF MEMORY\n");
+		return ACCOUNT_ERROR_OUT_OF_MEMORY;
+	}
 
 	return ACCOUNT_ERROR_NONE;
 }
@@ -2175,6 +2331,10 @@ ACCOUNT_API int account_type_get_service_provider_id(account_type_h account_type
 
 	(*service_provider_id) = NULL;
 	*service_provider_id = _account_get_text(data->service_provider_id);
+	if (*service_provider_id == NULL) {
+		ACCOUNT_FATAL("OUT OF MEMORY\n");
+		return ACCOUNT_ERROR_OUT_OF_MEMORY;
+	}
 
 	return ACCOUNT_ERROR_NONE;
 }
@@ -2193,6 +2353,10 @@ ACCOUNT_API int account_type_get_icon_path(account_type_h account_type, char **i
 
 	(*icon_path) = NULL;
 	*icon_path = _account_get_text(data->icon_path);
+	if (*icon_path == NULL) {
+		ACCOUNT_FATAL("OUT OF MEMORY\n");
+		return ACCOUNT_ERROR_OUT_OF_MEMORY;
+	}
 
 	return ACCOUNT_ERROR_NONE;
 }
@@ -2211,6 +2375,11 @@ ACCOUNT_API int account_type_get_small_icon_path(account_type_h account_type, ch
 
 	(*small_icon_path) = NULL;
 	*small_icon_path = _account_get_text(data->small_icon_path);
+	if (*small_icon_path == NULL) {
+		ACCOUNT_FATAL("OUT OF MEMORY\n");
+		return ACCOUNT_ERROR_OUT_OF_MEMORY;
+	}
+
 
 	return ACCOUNT_ERROR_NONE;
 }
@@ -2270,19 +2439,43 @@ ACCOUNT_API int account_type_get_label_by_locale(account_type_h account_type, co
 
 		if(!strcmp(locale, label_data->locale)) {
 			*label = _account_get_text(label_data->label);
+			if (*label == NULL) {
+				ACCOUNT_FATAL("OUT OF MEMORY\n");
+				return ACCOUNT_ERROR_OUT_OF_MEMORY;
+			}
+
 			return ACCOUNT_ERROR_NONE;
 		}
 		gchar** tokens = g_strsplit(locale, "-", 2);
+
 		if(tokens != NULL) {
 			if((char*)(tokens[1]) != NULL) {
 				char* upper_token = g_ascii_strup(tokens[1], strlen(tokens[1]));
+				if (upper_token == NULL) {
+					ACCOUNT_FATAL("Memory Allocation Failed");
+					g_strfreev(tokens);
+					return ACCOUNT_ERROR_OUT_OF_MEMORY;
+				}
+
 				if(upper_token != NULL) {
 					char* converted_locale = g_strdup_printf("%s_%s", tokens[0], upper_token);
+					if (converted_locale == NULL) {
+						ACCOUNT_FATAL("Memory Allocation Failed");
+						_ACCOUNT_FREE(upper_token);
+						g_strfreev(tokens);
+						return ACCOUNT_ERROR_OUT_OF_MEMORY;
+					}
+
 					if(!strcmp(converted_locale, label_data->locale)) {
 						_ACCOUNT_FREE(converted_locale);
 						_ACCOUNT_FREE(upper_token);
 						g_strfreev(tokens);
 						*label = _account_get_text(label_data->label);
+						if (*label == NULL) {
+							ACCOUNT_FATAL("OUT OF MEMORY\n");
+							return ACCOUNT_ERROR_OUT_OF_MEMORY;
+						}
+
 						return ACCOUNT_ERROR_NONE;
 					}
 					_ACCOUNT_FREE(converted_locale);
@@ -2606,7 +2799,13 @@ ACCOUNT_API int account_type_query_label_by_locale(const char* app_id, const cha
 		return ACCOUNT_ERROR_NO_DATA;
 	}
 
+	*label = NULL;
 	*label = _account_get_text(label_temp);
+	if (*label == NULL) {
+		ACCOUNT_FATAL("OUT OF MEMORY\n");
+		return ACCOUNT_ERROR_OUT_OF_MEMORY;
+	}
+
 	_INFO("account_type_query_label_by_locale end");
 	return ACCOUNT_ERROR_NONE;
 
@@ -2727,7 +2926,12 @@ static void _account_subscribe_vconf_callback(keynode_t *key, void *user_data)
 			ACCOUNT_ERROR("vconf key is NULL.\n");
 			return;
 		}
+
 		msg = strdup(vconf_key);
+		if (msg == NULL) {
+			ACCOUNT_FATAL("Memory Allocation Failed");
+			return;
+		}
 
 		char* event_type = NULL;
 		char* id = NULL;
@@ -2744,10 +2948,9 @@ static void _account_subscribe_vconf_callback(keynode_t *key, void *user_data)
 
 		if(tmp->account_subscription_callback)
 			tmp->account_subscription_callback(event_msg, account_id, tmp->user_data);
+
+		_ACCOUNT_FREE(msg);
 	}
-
-	_ACCOUNT_FREE(msg);
-
 }
 
 ACCOUNT_API int account_subscribe_create(account_subscribe_h* account_subscribe)
@@ -2758,7 +2961,6 @@ ACCOUNT_API int account_subscribe_create(account_subscribe_h* account_subscribe)
 	}
 
 	account_subscribe_s *data = (account_subscribe_s*)calloc(1,sizeof(account_subscribe_s));
-
 	if(!data) {
 		ACCOUNT_FATAL("OUT OF MEMORY\n");
 		return ACCOUNT_ERROR_OUT_OF_MEMORY;
@@ -2844,6 +3046,10 @@ static void _account_subscribe_vconf_callback_ex(keynode_t *key, void *user_data
 			return;
 		}
 		msg = strdup(vconf_key);
+		if (msg == NULL) {
+			ACCOUNT_FATAL("Memory Allocation Failed");
+			return;
+		}
 
 		char* event_type = NULL;
 		char* id = NULL;
