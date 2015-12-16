@@ -75,7 +75,7 @@ typedef bool (*account_cb)(account_h account, void *user_data);
  *
  * @see account_query_capability_by_account_id()
  */
-typedef bool (*capability_cb)(const char* capability_type, account_capability_state_e capability_state, void *user_data);
+typedef bool (*capability_cb)(const char *capability_type, account_capability_state_e capability_state, void *user_data);
 
 /**
  * @brief  Called once for each custom data of an account in the database.
@@ -92,7 +92,7 @@ typedef bool (*capability_cb)(const char* capability_type, account_capability_st
  *
  * @see account_query_capability_by_account_id()
  */
-typedef bool (*account_custom_cb)(char* key, char* value, void *user_data);
+typedef bool (*account_custom_cb)(char *key, char *value, void *user_data);
 
 
 /**
@@ -131,7 +131,7 @@ typedef bool (*account_type_cb)(account_type_h account_type, void *user_data);
  * @see account_type_get_label()
  * @see account_type_query_label_by_app_id()
  */
-typedef bool (*account_label_cb)(char* app_id, char* label, char* locale, void *user_data);
+typedef bool (*account_label_cb)(char *app_id, char *label, char *locale, void *user_data);
 
 
 /**
@@ -150,7 +150,7 @@ typedef bool (*account_label_cb)(char* app_id, char* label, char* locale, void *
  * @see account_type_query_provider_feature_by_app_id()
  * @see account_type_get_provider_feature_all()
  */
-typedef bool (*provider_feature_cb)(char* app_id, char* key, void* user_data);
+typedef bool (*provider_feature_cb)(char *app_id, char *key, void *user_data);
 
 
 /**
@@ -168,7 +168,7 @@ typedef bool (*provider_feature_cb)(char* app_id, char* key, void* user_data);
  *
  * @see account_subscribe_notification()
  */
-typedef bool (*account_event_cb)(const char* event_type, int account_id, void* user_data);
+typedef bool (*account_event_cb)(const char *event_type, int account_id, void *user_data);
 
 /**
  * @brief  Creates a handle to the account.
@@ -526,7 +526,7 @@ int account_set_display_name(account_h account, const char *display_name);
  *
  * @see account_set_capability()
  */
-int account_get_capability(account_h account, const char* capability_type, account_capability_state_e* capability_value);
+int account_get_capability(account_h account, const char *capability_type, account_capability_state_e *capability_value);
 
 /**
  * @brief  Gets all the capabilities of an account.
@@ -560,7 +560,7 @@ int account_get_capability_all(account_h account, capability_cb callback, void *
  *
  * @see account_get_capability()
  */
-int account_set_capability(account_h account, const char* capability_type, account_capability_state_e capability_state);
+int account_set_capability(account_h account, const char *capability_type, account_capability_state_e capability_state);
 
 
 /**
@@ -977,7 +977,7 @@ int account_set_source(account_h account, const char *source);
  *
  * @see account_get_custom()
  */
-int account_set_custom(account_h account, const char* key, const char* value);
+int account_set_custom(account_h account, const char *key, const char *value);
 
 /**
  * @brief  Gets the user specific custom text of an account key.
@@ -995,7 +995,7 @@ int account_set_custom(account_h account, const char* key, const char* value);
  *
  * @see account_set_custom()
  */
-int account_get_custom(account_h account, const char* key, char** value);
+int account_get_custom(account_h account, const char *key, char **value);
 
 
 /**
@@ -1014,7 +1014,7 @@ int account_get_custom(account_h account, const char* key, char** value);
  *
  * @see account_set_custom()
  */
-int account_get_custom_all(account_h account, account_custom_cb callback, void* user_data);
+int account_get_custom_all(account_h account, account_custom_cb callback, void *user_data);
 
 /**
  * @brief  Retrieves all accounts details by invoking the given callback function iteratively.
@@ -1099,7 +1099,7 @@ int account_query_account_by_account_id(int account_db_id, account_h *account);
  * @see account_query_account_by_capability()
  *
  */
-int account_query_account_by_user_name(account_cb callback, const char* user_name, void* user_data);
+int account_query_account_by_user_name(account_cb callback, const char *user_name, void *user_data);
 
 /**
  * @brief  Retrieves all accounts with the package name.
@@ -1158,7 +1158,7 @@ int account_query_account_by_package_name(account_cb callback, const char *packa
  * @see account_query_account_by_user_name()
  * @see account_query_account_by_package_name()
  */
-int account_query_account_by_capability(account_cb callback, const char* capability_type, account_capability_state_e capability_value, void *user_data);
+int account_query_account_by_capability(account_cb callback, const char *capability_type, account_capability_state_e capability_value, void *user_data);
 
 /**
  * @brief  Retrieves all accounts with the capability type.
@@ -1187,7 +1187,7 @@ int account_query_account_by_capability(account_cb callback, const char* capabil
  * @see account_query_account_by_user_name()
  * @see account_query_account_by_package_name()
  */
-int account_query_account_by_capability_type(account_cb callback, const char* capability_type, void* user_data);
+int account_query_account_by_capability_type(account_cb callback, const char *capability_type, void *user_data);
 
 /**
  * @brief  Retrieves all capabilities with the account database ID.
@@ -1322,7 +1322,7 @@ int account_type_destroy(account_type_h account_type);
  * @retval  #ACCOUNT_ERROR_DB_NOT_OPENED      Account database did not opened
  *
  */
-int account_type_query_provider_feature_by_app_id(provider_feature_cb callback, const char* app_id, void *user_data );
+int account_type_query_provider_feature_by_app_id(provider_feature_cb callback, const char *app_id, void *user_data);
 
 /**
  * @brief   Checks whether the given application ID supports the capability.
@@ -1348,7 +1348,7 @@ int account_type_query_provider_feature_by_app_id(provider_feature_cb callback, 
  * @excaption #ACCOUNT_ERROR_DB_NOT_OPENED      Account database did not opened
  *
  */
-bool account_type_query_supported_feature(const char* app_id, const char* capability);
+bool account_type_query_supported_feature(const char *app_id, const char *capability);
 
 /**
  * @brief  Gets the application ID of an account provider.
@@ -1471,7 +1471,7 @@ int account_type_get_multiple_account_support(account_type_h account_type, int *
  * @retval  #ACCOUNT_ERROR_DB_FAILED          Database operation failed
  *
  */
-int account_type_get_provider_feature_all(account_type_h account_type, provider_feature_cb callback, void* user_data);
+int account_type_get_provider_feature_all(account_type_h account_type, provider_feature_cb callback, void *user_data);
 
 /**
  * @brief  Gets the specific label information detail of an account provider.
@@ -1493,7 +1493,7 @@ int account_type_get_provider_feature_all(account_type_h account_type, provider_
  * @see account_type_query_by_app_id()
  */
 
-int account_type_get_label_by_locale(account_type_h account_type, const char* locale, char** label);
+int account_type_get_label_by_locale(account_type_h account_type, const char *locale, char **label);
 
 /**
  * @brief  Gets the label information detail of an account provider.
@@ -1538,7 +1538,7 @@ int account_type_get_label(account_type_h account_type, account_label_cb callbac
  * @see account_type_query_by_app_id()
  * @see account_type_foreach_account_type_from_db()
  */
-int account_type_query_label_by_app_id(account_label_cb callback, const char* app_id, void *user_data );
+int account_type_query_label_by_app_id(account_label_cb callback, const char *app_id, void *user_data);
 
 /**
  * @brief  Retrieves the account provider information with your application ID.
@@ -1569,7 +1569,7 @@ int account_type_query_label_by_app_id(account_label_cb callback, const char* ap
  * @see account_type_get_label()
  * @see account_type_destroy()
  */
-int account_type_query_by_app_id(const char* app_id, account_type_h *account_type);
+int account_type_query_by_app_id(const char *app_id, account_type_h *account_type);
 
 /**
  * @brief  Retrieves all account priovider information.
@@ -1624,7 +1624,7 @@ int account_type_foreach_account_type_from_db(account_type_cb callback, void *us
  * @retval  #ACCOUNT_ERROR_DB_NOT_OPENED      Account database did not opened
  *
  */
-int account_type_query_label_by_locale(const char* app_id, const char* locale, char** label);
+int account_type_query_label_by_locale(const char *app_id, const char *locale, char **label);
 
 /**
  * @brief  Retrieves account provider information with the capability name.
@@ -1648,7 +1648,7 @@ int account_type_query_label_by_locale(const char* app_id, const char* locale, c
  * @retval  #ACCOUNT_ERROR_DB_NOT_OPENED      Account database did not opened
  *
  */
-int account_type_query_by_provider_feature(account_type_cb callback, const char* key, void* user_data);
+int account_type_query_by_provider_feature(account_type_cb callback, const char *key, void *user_data);
 
 /**
  * @brief  Checks whether the given app_id exists in the account provider DB.
@@ -1670,7 +1670,7 @@ int account_type_query_by_provider_feature(account_type_cb callback, const char*
  *
  * @see account_type_query_by_app_id()
  */
-int account_type_query_app_id_exist(const char* app_id);
+int account_type_query_app_id_exist(const char *app_id);
 
 
 
@@ -1693,7 +1693,7 @@ int account_type_query_app_id_exist(const char* app_id);
  * @see account_unsubscribe_notification()
  * @see account_subscribe_notification()
  */
-int account_subscribe_create(account_subscribe_h* account_subscribe);
+int account_subscribe_create(account_subscribe_h *account_subscribe);
 
 /**
  * @brief  Starts to subscribe account event through the given callback function.
@@ -1717,7 +1717,7 @@ int account_subscribe_create(account_subscribe_h* account_subscribe);
  * @see account_unsubscribe_notification()
  * @see account_subscribe_notification()
  */
-int account_subscribe_notification(account_subscribe_h account_subscribe, account_event_cb callback, void* user_data);
+int account_subscribe_notification(account_subscribe_h account_subscribe, account_event_cb callback, void *user_data);
 
 /**
  * @brief  Destroys the account subscribe handle and releases all its resources.
@@ -1744,4 +1744,4 @@ int account_unsubscribe_notification(account_subscribe_h account_subscribe);
 #endif
 
 
-#endif //__ACCOUNT_H_
+#endif /* __ACCOUNT_H_ */

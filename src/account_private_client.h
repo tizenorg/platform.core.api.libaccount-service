@@ -36,11 +36,10 @@ extern "C"
 #include "wearable/account.h"
 #endif
 
-typedef struct _account_subscribe_s
-{
+typedef struct _account_subscribe_s {
 	    account_event_cb account_subscription_callback;
-	    void* user_data;
-}account_subscribe_s;
+	    void *user_data;
+} account_subscribe_s;
 
 #ifdef __cplusplus
 }

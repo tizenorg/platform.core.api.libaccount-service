@@ -25,7 +25,6 @@
 #include <vconf.h>
 #include <unistd.h>
 #include <sys/stat.h>
-//#include <tzplatform_config.h>
 #include <sys/types.h>
 #include <pwd.h>
 
@@ -44,16 +43,14 @@
 #define ACCOUNT_DB_OPEN_READONLY 0
 #define ACCOUNT_DB_OPEN_READWRITE 1
 
-//#define OWNER_ROOT 0
-//#define GLOBAL_USER tzplatform_getuid(TZ_SYS_GLOBALAPP_USER)
 #define APP_GID 100
 #define MIN_USER_UID 5000
 
-typedef sqlite3_stmt* account_stmt;
+typedef sqlite3_stmt * account_stmt;
 
-static sqlite3* g_hAccountUserDB = NULL;
-static sqlite3* g_hAccountGlobalDB = NULL;
-static int		g_refCntDB = 0;
+static sqlite3 *g_hAccountUserDB = NULL;
+static sqlite3 *g_hAccountGlobalDB = NULL;
+static int g_refCntDB = 0;
 pthread_mutex_t account_mutex = PTHREAD_MUTEX_INITIALIZER;
 
 static int _account_user_db_close(sqlite3 *hAccountDB)
@@ -63,11 +60,11 @@ static int _account_user_db_close(sqlite3 *hAccountDB)
 
 	if (hAccountDB) {
 		rc = db_util_close(hAccountDB);
-		if(  rc == SQLITE_PERM ){
-			ACCOUNT_ERROR( "Access failed(SQLITE_PERM)");
+		if (rc == SQLITE_PERM) {
+			ACCOUNT_ERROR("Access failed(SQLITE_PERM)");
 			return ACCOUNT_ERROR_PERMISSION_DENIED;
-		} else if ( rc == SQLITE_BUSY ){
-			ACCOUNT_ERROR( "database busy");
+		} else if (rc == SQLITE_BUSY) {
+			ACCOUNT_ERROR("database busy");
 			return ACCOUNT_ERROR_DATABASE_BUSY;
 		}
 		ACCOUNT_RETURN_VAL((rc == SQLITE_OK), {}, ACCOUNT_ERROR_DB_FAILED, ("The database isn't connected. rc : %d", rc));
@@ -89,29 +86,27 @@ static int _account_user_db_open(sqlite3 **p_hAccountDB, int mode, uid_t uid)
 	ACCOUNT_MEMSET(account_db_path, 0x00, sizeof(account_db_path));
 
 	ACCOUNT_GET_USER_DB_PATH(account_db_path, sizeof(account_db_path), uid);
-	_INFO( "account_db_path canonicalized = %s", account_db_path);
+	_INFO("account_db_path canonicalized = %s", account_db_path);
 
-	if (!g_hAccountUserDB) {
+	if (!g_hAccountUserDB)
 		_account_user_db_close(*p_hAccountDB);
-	}
+
 	ACCOUNT_GET_USER_DB_DIR(account_db_dir, sizeof(account_db_dir), uid);
-	if ((-1 == access (account_db_dir, F_OK)) && uid != OWNER_ROOT) {
+	if ((-1 == access(account_db_dir, F_OK)) && uid != OWNER_ROOT)
 		mkdir(account_db_dir, 644);
-	}
 
 	if (mode == ACCOUNT_DB_OPEN_READWRITE)
 		rc = db_util_open(account_db_path, p_hAccountDB, DB_UTIL_REGISTER_HOOK_METHOD);
-	else {
+	else
 		return ACCOUNT_ERROR_DB_NOT_OPENED;
-	}
 
-	if (_account_db_err_code(*p_hAccountDB) == SQLITE_PERM){
-		ACCOUNT_ERROR( "Access failed(%s)", _account_db_err_msg(*p_hAccountDB));
+	if (_account_db_err_code(*p_hAccountDB) == SQLITE_PERM) {
+		ACCOUNT_ERROR("Access failed(%s)", _account_db_err_msg(*p_hAccountDB));
 		return ACCOUNT_ERROR_PERMISSION_DENIED;
 	}
 
 	if (rc == SQLITE_BUSY) {
-		ACCOUNT_ERROR( "busy handler fail.");
+		ACCOUNT_ERROR("busy handler fail.");
 		return ACCOUNT_ERROR_DATABASE_BUSY;
 	}
 
@@ -143,7 +138,7 @@ static int _account_global_db_open(int mode)
 	char account_db_path[256] = {0, };
 	uid_t uid = -1;
 
-	_INFO( "start to get DB path");
+	_INFO("start to get DB path");
 
 	ACCOUNT_MEMSET(account_db_dir, 0x00, sizeof(account_db_dir));
 	ACCOUNT_MEMSET(account_db_path, 0x00, sizeof(account_db_path));
@@ -155,29 +150,26 @@ static int _account_global_db_open(int mode)
 	}
 
 	ACCOUNT_GET_GLOBAL_DB_PATH(account_db_path, sizeof(account_db_path));
-//	else
-//		ACCOUNT_GET_USER_DB_PATH(account_db_path, sizeof(account_db_path), uid);
-	_INFO( "account_db_path canonicalized = %s", account_db_path);
+
+	_INFO("account_db_path canonicalized = %s", account_db_path);
 
 	if (!g_hAccountGlobalDB) {
 		ACCOUNT_GET_USER_DB_DIR(account_db_dir, sizeof(account_db_dir), uid);
-		if ((-1 == access (account_db_dir, F_OK)) && uid != OWNER_ROOT) {
+		if ((-1 == access(account_db_dir, F_OK)) && uid != OWNER_ROOT)
 			mkdir(account_db_dir, 644);
-		}
 
 		if (mode == ACCOUNT_DB_OPEN_READWRITE)
 			rc = db_util_open(account_db_path, &g_hAccountGlobalDB, DB_UTIL_REGISTER_HOOK_METHOD);
-		else {
+		else
 			return ACCOUNT_ERROR_DB_NOT_OPENED;
-		}
 
-		if (_account_db_err_code(g_hAccountGlobalDB) == SQLITE_PERM){
-			ACCOUNT_ERROR( "Access failed(%s)", _account_db_err_msg(g_hAccountGlobalDB));
+		if (_account_db_err_code(g_hAccountGlobalDB) == SQLITE_PERM) {
+			ACCOUNT_ERROR("Access failed(%s)", _account_db_err_msg(g_hAccountGlobalDB));
 			return ACCOUNT_ERROR_PERMISSION_DENIED;
 		}
 
 		if (rc == SQLITE_BUSY) {
-			ACCOUNT_ERROR( "busy handler fail.");
+			ACCOUNT_ERROR("busy handler fail.");
 			return ACCOUNT_ERROR_DATABASE_BUSY;
 		}
 
@@ -213,16 +205,15 @@ static int _account_global_db_close(void)
 	int ret = -1;
 
 	if (g_hAccountGlobalDB) {
-		if (g_refCntDB > 0) {
+		if (g_refCntDB > 0)
 			g_refCntDB--;
-		}
 		if (g_refCntDB == 0) {
 			rc = db_util_close(g_hAccountGlobalDB);
-			if(  rc == SQLITE_PERM ){
-				ACCOUNT_ERROR( "Access failed(SQLITE_PERM)");
+			if (rc == SQLITE_PERM) {
+				ACCOUNT_ERROR("Access failed(SQLITE_PERM)");
 				return ACCOUNT_ERROR_PERMISSION_DENIED;
-			} else if ( rc == SQLITE_BUSY ){
-				ACCOUNT_ERROR( "database busy");
+			} else if (rc == SQLITE_BUSY) {
+				ACCOUNT_ERROR("database busy");
 				return ACCOUNT_ERROR_DATABASE_BUSY;
 			}
 			ACCOUNT_RETURN_VAL((rc == SQLITE_OK), {}, ACCOUNT_ERROR_DB_FAILED, ("The database isn't connected. rc : %d", rc));
@@ -230,7 +221,7 @@ static int _account_global_db_close(void)
 		}
 		ret = ACCOUNT_ERROR_NONE;
 	} else {
-		ACCOUNT_ERROR( "_account_svc_db_close: No handle(). refcnt=%d ", g_refCntDB);
+		ACCOUNT_ERROR("_account_svc_db_close: No handle(). refcnt=%d ", g_refCntDB);
 		ret = ACCOUNT_ERROR_DB_FAILED;
 	}
 
@@ -238,7 +229,7 @@ static int _account_global_db_close(void)
 }
 
 
-ACCOUNT_INTERNAL_API int account_type_insert_to_db_offline(account_type_h account_type, int* account_type_id)
+ACCOUNT_INTERNAL_API int account_type_insert_to_db_offline(account_type_h account_type, int *account_type_id)
 {
 	_INFO("account_type_insert_to_db starting");
 
@@ -256,16 +247,13 @@ ACCOUNT_INTERNAL_API int account_type_insert_to_db_offline(account_type_h accoun
 	_INFO("client Id = [%u]", pid);
 
 	return_code = _account_global_db_open(1);
-	if (return_code != ACCOUNT_ERROR_NONE)
-	{
+	if (return_code != ACCOUNT_ERROR_NONE) {
 		_ERR("_account_global_db_open() error, ret = %d", return_code);
-
 		goto RETURN;
 	}
 
 	uid = getuid();
-	if (uid != OWNER_ROOT && uid != GLOBAL_USER)
-	{
+	if (uid != OWNER_ROOT && uid != GLOBAL_USER) {
 		_ERR("current process is not root user nor global user, uid=%d", uid);
 		goto RETURN;
 	}
@@ -283,8 +271,7 @@ ACCOUNT_INTERNAL_API int account_type_insert_to_db_offline(account_type_h accoun
 	_INFO("before _account_type_insert_to_db");
 	return_code = _account_type_insert_to_db(g_hAccountGlobalDB, account_type_data, &db_id);
 	_INFO("after _account_type_insert_to_db");
-	if (return_code != ACCOUNT_ERROR_NONE)
-	{
+	if (return_code != ACCOUNT_ERROR_NONE) {
 		_ERR("_account_type_insert_to_db error");
 		goto RETURN;
 	}
@@ -295,20 +282,17 @@ ACCOUNT_INTERNAL_API int account_type_insert_to_db_offline(account_type_h accoun
 RETURN:
 	_INFO("account_manager_account_type_add end");
 
-	if( g_hAccountUserDB == NULL )
+	if (g_hAccountUserDB == NULL)
 		return return_code;
 
 	return_code = _account_global_db_close();
 	if (return_code != ACCOUNT_ERROR_NONE)
-	{
 		ACCOUNT_DEBUG("_account_global_db_close() fail[%d]", return_code);
-//		return_code = ACCOUNT_ERROR_DB_FAILED;
-	}
 
 	return return_code;
 }
 
-ACCOUNT_INTERNAL_API int account_type_delete_by_app_id_offline(const char* app_id)
+ACCOUNT_INTERNAL_API int account_type_delete_by_app_id_offline(const char *app_id)
 {
 	_INFO("account_type_delete_by_app_id starting");
 
@@ -319,62 +303,40 @@ ACCOUNT_INTERNAL_API int account_type_delete_by_app_id_offline(const char* app_i
 	_INFO("client Id = [%u]", pid);
 
 	int return_code = _account_global_db_open(1);
-	if (return_code != ACCOUNT_ERROR_NONE)
-	{
+	if (return_code != ACCOUNT_ERROR_NONE) {
 		_ERR("_account_global_db_open() error, ret = %d", return_code);
-
 		goto RETURN;
 	}
 
 	uid_t uid = getuid();
-	if (uid != OWNER_ROOT && uid != GLOBAL_USER)
-	{
+	if (uid != OWNER_ROOT && uid != GLOBAL_USER) {
 		_ERR("current daemon is not root user, uid=%d", uid);
 		goto RETURN;
 	}
 
-//	_account_begin_transaction(g_hAccountGlobalDB);
 	pthread_mutex_lock(&account_mutex);
 	_INFO("before _account_type_delete_by_app_id");
 	return_code = _account_type_delete_by_app_id(g_hAccountGlobalDB, app_id);
 	_INFO("after _account_type_delete_by_app_id=[%d]", return_code);
 	pthread_mutex_unlock(&account_mutex);
 
-	if (return_code != ACCOUNT_ERROR_NONE)
-	{
+	if (return_code != ACCOUNT_ERROR_NONE) {
 		_ERR("_account_type_delete_by_app_id error");
 		goto RETURN;
 	}
 
 RETURN:
-//	_account_end_transaction(g_hAccountGlobalDB, true);
-
-	if( g_hAccountGlobalDB == NULL )
+	if (g_hAccountGlobalDB == NULL)
 		return return_code;
 
 	return_code = _account_global_db_close();
 	if (return_code != ACCOUNT_ERROR_NONE)
-	{
 		ACCOUNT_DEBUG("_account_global_db_close() fail[%d]", return_code);
-//		return_code = ACCOUNT_ERROR_DB_FAILED;
-	}
 
 	_INFO("account_type_delete_by_app_id_offline end");
 	return return_code;
 }
-/*
-static void _account_insert_delete_update_notification_send(char *noti_name, int pid)
-{
-	if (!noti_name) {
-		_ERR("Noti Name is NULL!!!!!!\n");
-		return;
-	}
 
-	if (vconf_set_str(VCONFKEY_ACCOUNT_MSG_STR, noti_name) != 0) {
-		_ERR("Vconf MSG Str set FAILED !!!!!!\n");;
-	}
-}
-*/
 ACCOUNT_INTERNAL_API int account_delete_from_db_by_package_name_offline(const char *package_name)
 {
 	_INFO("_account_delete_from_db_by_package_name_offline");
@@ -391,36 +353,26 @@ ACCOUNT_INTERNAL_API int account_delete_from_db_by_package_name_offline(const ch
 		return_code = ACCOUNT_ERROR_PERMISSION_DENIED;
 		goto RETURN;
 	}
-//	gid = getgid();
 
 	setpwent();
 	while ((user_pw = getpwent()) != NULL) {
 		uid = user_pw->pw_uid;
 		gid = user_pw->pw_gid;
 		_INFO("user_pw->pw_uid=[%d], user_pw->pw_gid", uid, gid);
-		if (uid > MIN_USER_UID && gid == APP_GID ) {
+		if (uid > MIN_USER_UID && gid == APP_GID) {
 			sqlite3 *hAccountDB = NULL;
-			_INFO("before _account_user_db_open");
 			return_code = _account_user_db_open(&hAccountDB, 1, uid);
-			_INFO("after _account_user_db_open ret=[%d]", return_code);
-			if (return_code != ACCOUNT_ERROR_NONE)
-			{
-				ACCOUNT_DEBUG("_account_user_db_open() error, ret=[%d]", return_code);
-			}
 
-			_INFO("before _account_delete_account_by_package_name");
-			return_code = _account_delete_account_by_package_name(hAccountDB, package_name, false, getpid(), uid);
-			_INFO("after _account_delete_account_by_package_name ret=[%d]", return_code);
 			if (return_code != ACCOUNT_ERROR_NONE)
-			{
+				ACCOUNT_DEBUG("_account_user_db_open() error, ret=[%d]", return_code);
+
+			return_code = _account_delete_account_by_package_name(hAccountDB, package_name, false, getpid(), uid);
+			if (return_code != ACCOUNT_ERROR_NONE)
 				ACCOUNT_DEBUG("_account_delete_account_by_package_name error=[%d]", return_code);
-			}
 
 			return_code = _account_user_db_close(hAccountDB);
 			if (return_code != ACCOUNT_ERROR_NONE)
-			{
 				ACCOUNT_DEBUG("_account_user_db_close() fail[%d]", return_code);
-			}
 		}
 	}
 	endpwent();

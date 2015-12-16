@@ -233,7 +233,7 @@ int account_type_set_multiple_account_support(account_type_h account_type, const
  *
  * @see account_type_get_label()
  */
-int account_type_set_label(account_type_h account_type, const char* label, const char* locale);
+int account_type_set_label(account_type_h account_type, const char *label, const char *locale);
 
 /**
  * @internal
@@ -250,7 +250,7 @@ int account_type_set_label(account_type_h account_type, const char* label, const
  *
  * @see account_set_capability()
  */
-int account_type_set_provider_feature(account_type_h account_type, const char* provider_feature);
+int account_type_set_provider_feature(account_type_h account_type, const char *provider_feature);
 
 /**
  * @internal
@@ -279,7 +279,7 @@ int account_type_set_provider_feature(account_type_h account_type, const char* p
  * @see account_connect()
  * @see account_disconnect()
  */
-int account_type_insert_to_db(account_type_h account_type, int* account_type_id);
+int account_type_insert_to_db(account_type_h account_type, int *account_type_id);
 
 /**
  * @internal
@@ -307,7 +307,7 @@ int account_type_insert_to_db(account_type_h account_type, int* account_type_id)
  * @see account_connect()
  * @see account_disconnect()
  */
-int account_type_update_to_db_by_app_id(const account_type_h account_type, const char* app_id);
+int account_type_update_to_db_by_app_id(const account_type_h account_type, const char *app_id);
 
 /**
  * @internal
@@ -334,7 +334,7 @@ int account_type_update_to_db_by_app_id(const account_type_h account_type, const
  * @see account_connect()
  * @see account_disconnect()
  */
-int account_type_delete_by_app_id(const char* app_id);
+int account_type_delete_by_app_id(const char *app_id);
 
 /**
  * @internal
@@ -352,7 +352,7 @@ int account_type_delete_by_app_id(const char* app_id);
  * @see account_unsubscribe_notification()
  * @see account_subscribe_notification()
  */
-int account_subscribe_notification_ex(account_subscribe_h account_subscribe, account_event_cb cb_func, void* user_data);
+int account_subscribe_notification_ex(account_subscribe_h account_subscribe, account_event_cb cb_func, void *user_data);
 
 /**
  * @internal
@@ -393,9 +393,9 @@ int account_unsubscribe_notification_ex(account_subscribe_h account_subscribe);
 int account_get_total_count_from_db_ex(int *count);
 
 /*offline apis*/
-int account_type_insert_to_db_offline(account_type_h account_type, int* account_type_id);
+int account_type_insert_to_db_offline(account_type_h account_type, int *account_type_id);
 
-int account_type_delete_by_app_id_offline(const char* app_id);
+int account_type_delete_by_app_id_offline(const char *app_id);
 
 /**
 * @}

@@ -36,14 +36,11 @@ extern "C"
  * @brief  This file contains ACCOUNT error definitions.
  */
 
-//#define TIZEN_ERROR_ACCOUNT_CLASS SLP_ERROR_ACCOUNT | 0x90
-
 /**
  *  @brief    Enumerations of error codes for ACCOUNT APIs.
  *  @since_tizen @if MOBILE 2.3 @elseif WEARABLE 2.4 @endif
  */
-typedef enum
-{
+typedef enum {
 	ACCOUNT_ERROR_NONE                  = TIZEN_ERROR_NONE,                   /**< Successful */
 	ACCOUNT_ERROR_OUT_OF_MEMORY             = TIZEN_ERROR_OUT_OF_MEMORY,              /**< Out of memory */
 	ACCOUNT_ERROR_INVALID_PARAMETER         = TIZEN_ERROR_INVALID_PARAMETER,        /**< Invalid parameter */
