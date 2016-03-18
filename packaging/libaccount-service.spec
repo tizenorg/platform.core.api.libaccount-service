@@ -16,6 +16,11 @@ BuildRequires:  pkgconfig(gio-unix-2.0)
 BuildRequires:  pkgconfig(account-common)
 BuildRequires:  pkgconfig(db-util)
 
+
+%if "%{?profile}" == "tv"
+ExcludeArch: %{arm} %ix86 x86_64
+%endif
+
 %description
 Account DB libraryXB-Public-Package: no
 
