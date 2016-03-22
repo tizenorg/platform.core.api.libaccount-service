@@ -38,7 +38,7 @@ extern "C"
 
 /**
  *  @brief    Enumerations of error codes for ACCOUNT APIs.
- *  @since_tizen @if MOBILE 2.3 @elseif WEARABLE 2.4 @endif
+ *  @since_tizen @if MOBILE 2.3 @elseif WEARABLE 3.0 @endif
  */
 typedef enum {
 	ACCOUNT_ERROR_NONE                  = TIZEN_ERROR_NONE,                   /**< Successful */

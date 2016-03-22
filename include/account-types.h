@@ -38,7 +38,7 @@ extern "C"
 
 /**
  * @brief  Enumeration for the state of capability.
- * @since_tizen @if MOBILE 2.3 @elseif WEARABLE 2.4 @endif
+ * @since_tizen @if MOBILE 2.3 @elseif WEARABLE 3.0 @endif
  */
 typedef enum {
 	ACCOUNT_CAPABILITY_STATE_INVALID = 0, /**< Account capability is invalid */
@@ -49,7 +49,7 @@ typedef enum {
 
 /**
  * @brief  Enumeration for the state of account secrecy.
- * @since_tizen @if MOBILE 2.3 @elseif WEARABLE 2.4 @endif
+ * @since_tizen @if MOBILE 2.3 @elseif WEARABLE 3.0 @endif
  */
 typedef enum {
 	ACCOUNT_SECRECY_INVALID = 0, /**< Account secrecy is invalid */
@@ -60,7 +60,7 @@ typedef enum {
 
 /**
  * @brief  Enumeration for the account sync status.
- * @since_tizen @if MOBILE 2.3 @elseif WEARABLE 2.4 @endif
+ * @since_tizen @if MOBILE 2.3 @elseif WEARABLE 3.0 @endif
  */
 typedef enum {
 	ACCOUNT_SYNC_INVALID = 0, /**< Account sync is invalid */
@@ -75,7 +75,7 @@ typedef enum {
 
 /**
  * @brief  Enumeration for the account auth type.
- * @since_tizen @if MOBILE 2.3 @elseif WEARABLE 2.4 @endif
+ * @since_tizen @if MOBILE 2.3 @elseif WEARABLE 3.0 @endif
  */
 typedef enum {
 	ACCOUNT_AUTH_TYPE_INVALID = 0, /**< Auth type is invalid */
@@ -87,31 +87,31 @@ typedef enum {
 
 /**
  * @brief  The structure type for the Account handle.
- * @since_tizen @if MOBILE 2.3 @elseif WEARABLE 2.4 @endif
+ * @since_tizen @if MOBILE 2.3 @elseif WEARABLE 3.0 @endif
  */
 typedef struct account_s *account_h;
 
 /**
  * @brief  The structure type for the Account provider handle.
- * @since_tizen @if MOBILE 2.3 @elseif WEARABLE 2.4 @endif
+ * @since_tizen @if MOBILE 2.3 @elseif WEARABLE 3.0 @endif
  */
 typedef struct account_type_s *account_type_h;
 
 /**
  * @brief  The structure type for the Account handle.
- * @since_tizen @if MOBILE 2.3 @elseif WEARABLE 2.4 @endif
+ * @since_tizen @if MOBILE 2.3 @elseif WEARABLE 3.0 @endif
  */
 typedef struct label_s *label_h;
 
 /**
  * @brief  The structure type for the Account subscribe handle.
- * @since_tizen @if MOBILE 2.3 @elseif WEARABLE 2.4 @endif
+ * @since_tizen @if MOBILE 2.3 @elseif WEARABLE 3.0 @endif
  */
 typedef struct account_subscribe_s *account_subscribe_h;
 
 /**
  * @brief        The insert notification type.
- * @since_tizen @if MOBILE 2.3 @elseif WEARABLE 2.4 @endif
+ * @since_tizen @if MOBILE 2.3 @elseif WEARABLE 3.0 @endif
  * @remarks      When the account database is changed, You can distinguish one event type from the other which are set for subscribing notification.
  *
  * @see account_subscribe_notification()
@@ -120,7 +120,7 @@ typedef struct account_subscribe_s *account_subscribe_h;
 
 /**
  * @brief        The update notification type.
- * @since_tizen @if MOBILE 2.3 @elseif WEARABLE 2.4 @endif
+ * @since_tizen @if MOBILE 2.3 @elseif WEARABLE 3.0 @endif
  * @remarks      When the account database is changed, You can distinguish one event type from the other which are set for subscribing notification.
  *
  * @see account_subscribe_notification()
@@ -129,7 +129,7 @@ typedef struct account_subscribe_s *account_subscribe_h;
 
 /**
  * @brief        The delete notification type.
- * @since_tizen @if MOBILE 2.3 @elseif WEARABLE 2.4 @endif
+ * @since_tizen @if MOBILE 2.3 @elseif WEARABLE 3.0 @endif
  * @remarks      When the account database is changed, You can distinguish one event type from the other which are set for subscribing notification.
  *
  * @see account_subscribe_notification()
@@ -138,7 +138,7 @@ typedef struct account_subscribe_s *account_subscribe_h;
 
 /**
  * @brief        The sync_update notification type.
- * @since_tizen @if MOBILE 2.3 @elseif WEARABLE 2.4 @endif
+ * @since_tizen @if MOBILE 2.3 @elseif WEARABLE 3.0 @endif
  * @remarks      When the account database is changed, You can distinguish one event type from the other which are set for subscribing notification.
  *
  * @see account_subscribe_notification()
@@ -148,7 +148,7 @@ typedef struct account_subscribe_s *account_subscribe_h;
 
 /**
  * @brief        This is a key of app_control_h’s extra data. The value of the key is a user account name.
- * @since_tizen @if MOBILE 2.3 @elseif WEARABLE 2.4 @endif
+ * @since_tizen @if MOBILE 2.3 @elseif WEARABLE 3.0 @endif
  * @remarks      You can retrieve the value like this, app_control_get_extra_data(app_control, ACCOUNT_DATA_USERNAME, &username).\n
  *               This value will be sent with ACCOUNT_OPERATION_VIEW.
  */
@@ -156,7 +156,7 @@ typedef struct account_subscribe_s *account_subscribe_h;
 
 /**
  * @brief        This is a key of app_control_h’s extra data. The value of the key is account DB ID of the user’s account information.
- * @since_tizen @if MOBILE 2.3 @elseif WEARABLE 2.4 @endif
+ * @since_tizen @if MOBILE 2.3 @elseif WEARABLE 3.0 @endif
  * @remarks      You can retrieve the value like this, app_control_get_extra_data(app_control, ACCOUNT_DATA_ID, &id).\n
  *               This value will be sent with ACCOUNT_OPERATION_VIEW.
  */
@@ -164,77 +164,77 @@ typedef struct account_subscribe_s *account_subscribe_h;
 
 /**
  * @brief        This is an application launch operation name.
- * @since_tizen @if MOBILE 2.3 @elseif WEARABLE 2.4 @endif
+ * @since_tizen @if MOBILE 2.3 @elseif WEARABLE 3.0 @endif
  * @remarks      This operation will be sent when a user selects your account in add account view.
  */
 #define ACCOUNT_OPERATION_SIGNIN                          "http://tizen.org/appcontrol/operation/account/add"
 
 /**
  * @brief        This is an application launch operation name.
- * @since_tizen @if MOBILE 2.3 @elseif WEARABLE 2.4 @endif
+ * @since_tizen @if MOBILE 2.3 @elseif WEARABLE 3.0 @endif
  * @remarks      This operation will be sent when a user selects your account in account list view.
  */
 #define ACCOUNT_OPERATION_VIEW                            "http://tizen.org/appcontrol/operation/account/configure"
 
 /**
  * @brief        This is contact capability string.
- * @since_tizen @if MOBILE 2.3 @elseif WEARABLE 2.4 @endif
+ * @since_tizen @if MOBILE 2.3 @elseif WEARABLE 3.0 @endif
  * @remarks      If your provider service has contact information and contact information is provided another application, register this capability through manifest file.
  */
 #define ACCOUNT_SUPPORTS_CAPABILITY_CONTACT               "http://tizen.org/account/capability/contact"
 
 /**
  * @brief        This is calendar capability string.
- * @since_tizen @if MOBILE 2.3 @elseif WEARABLE 2.4 @endif
+ * @since_tizen @if MOBILE 2.3 @elseif WEARABLE 3.0 @endif
  * @remarks      If your provider service has calendar information and calendar information is provided another application, register this capability through manifest file.
  */
 #define ACCOUNT_SUPPORTS_CAPABILITY_CALENDAR              "http://tizen.org/account/capability/calendar"
 
 /**
  * @brief        This is email capability string.
- * @since_tizen @if MOBILE 2.3 @elseif WEARABLE 2.4 @endif
+ * @since_tizen @if MOBILE 2.3 @elseif WEARABLE 3.0 @endif
  * @remarks      If your provider service have email service and email is provided another application, register this capability through manifest file.
  */
 #define ACCOUNT_SUPPORTS_CAPABILITY_EMAIL                 "http://tizen.org/account/capability/email"
 
 /**
  * @brief        This is photo capability string.
- * @since_tizen @if MOBILE 2.3 @elseif WEARABLE 2.4 @endif
+ * @since_tizen @if MOBILE 2.3 @elseif WEARABLE 3.0 @endif
  * @remarks      If your provider service has photo and photo is provided another application, register this capability through manifest file.
  */
 #define ACCOUNT_SUPPORTS_CAPABILITY_PHOTO                 "http://tizen.org/account/capability/photo"
 
 /**
  * @brief        This is video capability string.
- * @since_tizen @if MOBILE 2.3 @elseif WEARABLE 2.4 @endif
+ * @since_tizen @if MOBILE 2.3 @elseif WEARABLE 3.0 @endif
  * @remarks      If your provider service has video and video is provided another application, register this capability through manifest file.
  */
 #define ACCOUNT_SUPPORTS_CAPABILITY_VIDEO                 "http://tizen.org/account/capability/video"
 
 /**
  * @brief        This is music capability string.
- * @since_tizen @if MOBILE 2.3 @elseif WEARABLE 2.4 @endif
+ * @since_tizen @if MOBILE 2.3 @elseif WEARABLE 3.0 @endif
  * @remarks      If your provider service has music and music is provided another application, register this capability through manifest file.
  */
 #define ACCOUNT_SUPPORTS_CAPABILITY_MUSIC                 "http://tizen.org/account/capability/music"
 
 /**
  * @brief        This is document capability string.
- * @since_tizen @if MOBILE 2.3 @elseif WEARABLE 2.4 @endif
+ * @since_tizen @if MOBILE 2.3 @elseif WEARABLE 3.0 @endif
  * @remarks      If your provider service has document and document is provided another application, register this capability through manifest file.
  */
 #define ACCOUNT_SUPPORTS_CAPABILITY_DOCUMENT                 "http://tizen.org/account/capability/document"
 
 /**
  * @brief        This is message capability string.
- * @since_tizen @if MOBILE 2.3 @elseif WEARABLE 2.4 @endif
+ * @since_tizen @if MOBILE 2.3 @elseif WEARABLE 3.0 @endif
  * @remarks      This capability will be exploited to use SMS, MMS.
  */
 #define ACCOUNT_SUPPORTS_CAPABILITY_MESSAGE               "http://tizen.org/account/capability/message"
 
 /**
  * @brief        This is game capability string.
- * @since_tizen @if MOBILE 2.3 @elseif WEARABLE 2.4 @endif
+ * @since_tizen @if MOBILE 2.3 @elseif WEARABLE 3.0 @endif
  * @remarks      This capability will be exploited to use game data.
  */
 #define ACCOUNT_SUPPORTS_CAPABILITY_GAME               "http://tizen.org/account/capability/game"
