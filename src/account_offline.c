@@ -45,6 +45,7 @@
 
 #define APP_GID 100
 #define MIN_USER_UID 5000
+#define PW_BUF_LEN 4096
 
 typedef sqlite3_stmt * account_stmt;
 
@@ -343,7 +344,9 @@ ACCOUNT_INTERNAL_API int account_delete_from_db_by_package_name_offline(const ch
 	uid_t uid = -1;
 	uid_t gid = -1;
 	int return_code = ACCOUNT_ERROR_NONE;
+	struct passwd pw;
 	struct passwd *user_pw = NULL;
+	char buf[PW_BUF_LEN];
 
 	ACCOUNT_RETURN_VAL((package_name != NULL), {}, ACCOUNT_ERROR_INVALID_PARAMETER, ("package_name is null!"));
 
@@ -355,7 +358,7 @@ ACCOUNT_INTERNAL_API int account_delete_from_db_by_package_name_offline(const ch
 	}
 
 	setpwent();
-	while ((user_pw = getpwent()) != NULL) {
+	while (!getpwent_r(&pw, buf, PW_BUF_LEN, &user_pw)) {
 		uid = user_pw->pw_uid;
 		gid = user_pw->pw_gid;
 		_INFO("user_pw->pw_uid=[%d], user_pw->pw_gid", uid, gid);
