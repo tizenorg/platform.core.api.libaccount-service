@@ -1890,6 +1890,7 @@ ACCOUNT_INTERNAL_API int account_type_set_label(account_type_h account_type, con
 	label_data->label = _account_get_text(label);
 	if (label_data->label == NULL) {
 		ACCOUNT_FATAL("OUT OF MEMORY\n");
+		_ACCOUNT_FREE(label_data);
 		return ACCOUNT_ERROR_OUT_OF_MEMORY;
 	}
 
@@ -1897,6 +1898,7 @@ ACCOUNT_INTERNAL_API int account_type_set_label(account_type_h account_type, con
 	if (label_data->locale == NULL) {
 		ACCOUNT_FATAL("OUT OF MEMORY\n");
 		_ACCOUNT_FREE(label_data->label);
+		_ACCOUNT_FREE(label_data);
 		return ACCOUNT_ERROR_OUT_OF_MEMORY;
 	}
 
