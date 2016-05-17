@@ -54,6 +54,7 @@ static sqlite3 *g_hAccountGlobalDB = NULL;
 static int g_refCntDB = 0;
 pthread_mutex_t account_mutex = PTHREAD_MUTEX_INITIALIZER;
 
+/* LCOV_EXCL_START */
 static int _account_user_db_close(sqlite3 *hAccountDB)
 {
 	int rc = 0;
@@ -75,8 +76,9 @@ static int _account_user_db_close(sqlite3 *hAccountDB)
 
 	return ret;
 }
+/* LCOV_EXCL_STOP */
 
-
+/* LCOV_EXCL_START */
 static int _account_user_db_open(sqlite3 **p_hAccountDB, int mode, uid_t uid)
 {
 	int  rc = 0;
@@ -131,7 +133,9 @@ static int _account_user_db_open(sqlite3 **p_hAccountDB, int mode, uid_t uid)
 
 	return ACCOUNT_ERROR_NONE;
 }
+/* LCOV_EXCL_STOP */
 
+/* LCOV_EXCL_START */
 static int _account_global_db_open(int mode)
 {
 	int  rc = 0;
@@ -199,7 +203,9 @@ static int _account_global_db_open(int mode)
 
 	return ACCOUNT_ERROR_NONE;
 }
+/* LCOV_EXCL_STOP */
 
+/* LCOV_EXCL_START */
 static int _account_global_db_close(void)
 {
 	int rc = 0;
@@ -228,8 +234,10 @@ static int _account_global_db_close(void)
 
 	return ret;
 }
+/* LCOV_EXCL_STOP */
 
 
+/* LCOV_EXCL_START */
 ACCOUNT_INTERNAL_API int account_type_insert_to_db_offline(account_type_h account_type, int *account_type_id)
 {
 	_INFO("account_type_insert_to_db starting");
@@ -292,7 +300,9 @@ RETURN:
 
 	return return_code;
 }
+/* LCOV_EXCL_STOP */
 
+/* LCOV_EXCL_START */
 ACCOUNT_INTERNAL_API int account_type_delete_by_app_id_offline(const char *app_id)
 {
 	_INFO("account_type_delete_by_app_id starting");
@@ -337,7 +347,9 @@ RETURN:
 	_INFO("account_type_delete_by_app_id_offline end");
 	return return_code;
 }
+/* LCOV_EXCL_STOP */
 
+/* LCOV_EXCL_START */
 ACCOUNT_INTERNAL_API int account_delete_from_db_by_package_name_offline(const char *package_name)
 {
 	_INFO("_account_delete_from_db_by_package_name_offline");
@@ -386,3 +398,4 @@ RETURN:
 
 	return return_code;
 }
+/* LCOV_EXCL_STOP */

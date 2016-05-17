@@ -37,8 +37,8 @@ ELSE  ("${ARCH}" STREQUAL "arm")
         MESSAGE("[i386] Compile")
 ENDIF ("${ARCH}" STREQUAL "arm")
 
-SET(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${EXTRA_CFLAGS} -Wall -Werror")
-SET(CMAKE_LDFLAGS "-Wl,-zdefs")
+SET(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${EXTRA_CFLAGS} -Wall -Werror -fprofile-arcs -ftest-coverage")
+SET(CMAKE_LDFLAGS "-Wl,-zdefs -lgcov")
 
 ADD_DEFINITIONS("-DPREFIX=\"${CMAKE_INSTALL_PREFIX}\"")
 ADD_DEFINITIONS("-DFACTORYFS=\"$ENV{FACTORYFS}\"")

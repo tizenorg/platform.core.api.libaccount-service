@@ -81,11 +81,13 @@ _account_manager_get_instance()
 	_INFO("after g_bus_get_sync");
 
 	if (!connection) {
+/* LCOV_EXCL_START */
 		if (error) {
 			_ERR("Unable to connect to gdbus: %s", error->message);
 			g_clear_error(&error);
 		}
 		return NULL;
+/* LCOV_EXCL_STOP */
 	}
 
 	g_clear_error(&error);
@@ -100,6 +102,7 @@ _account_manager_get_instance()
 										 &error);
 
 	if (!_acc_mgr) {
+/* LCOV_EXCL_START */
 		if (error) {
 			_ERR("Unable account_manager_proxy_new_sync: %s", error->message);
 			g_clear_error(&error);
@@ -107,6 +110,7 @@ _account_manager_get_instance()
 		if (connection)
 			g_object_unref(connection);
 		return NULL;
+/* LCOV_EXCL_STOP */
 	}
 
 	g_clear_error(&error);
@@ -214,10 +218,12 @@ ACCOUNT_API int account_insert_to_db(account_h account, int *account_db_id)
 	return ACCOUNT_ERROR_NONE;
 
 CATCH:
+/* LCOV_EXCL_START */
 	g_clear_error(&error);
 	_ERR("account_manager_call_account_add_sync()=[%d]", error_code);
 
 	return error_code;
+/* LCOV_EXCL_STOP */
 }
 
 ACCOUNT_API int account_delete_from_db_by_id(int account_db_id)
@@ -231,7 +237,9 @@ ACCOUNT_API int account_delete_from_db_by_id(int account_db_id)
 
 	AccountManager *acc_mgr = _account_manager_get_instance();
 	if (acc_mgr == NULL) {
+/* LCOV_EXCL_START */
 		_ERR("g_bus_get_sync failed");
+/* LCOV_EXCL_STOP */
 		return ACCOUNT_ERROR_PERMISSION_DENIED;
 	}
 
@@ -240,9 +248,11 @@ ACCOUNT_API int account_delete_from_db_by_id(int account_db_id)
 	bool is_success = account_manager_call_account_query_account_by_account_id_sync(acc_mgr, account_db_id, (int)getuid(), &account_serialized_old, NULL, &error);
 
 	if (!is_success) {
+/* LCOV_EXCL_START */
 		error_code = _account_get_error_code(is_success, error);
 		g_clear_error(&error);
 		_ERR("account_manager_call_account_query_account_by_account_id_sync failed [%d]", error_code);
+/* LCOV_EXCL_STOP */
 		return error_code;
 	}
 	g_clear_error(&error);
@@ -275,7 +285,9 @@ ACCOUNT_API int account_delete_from_db_by_user_name(char *user_name, char *packa
 
 	AccountManager *acc_mgr = _account_manager_get_instance();
 	if (acc_mgr == NULL) {
+/* LCOV_EXCL_START */
 		_ERR("g_bus_get_sync failed");
+/* LCOV_EXCL_STOP */
 		return ACCOUNT_ERROR_PERMISSION_DENIED;
 	}
 
@@ -321,7 +333,9 @@ int _account_delete_from_db_by_package_name(const char *package_name, bool permi
 
 	AccountManager *acc_mgr = _account_manager_get_instance();
 	if (acc_mgr == NULL) {
+/* LCOV_EXCL_START */
 		_ERR("g_bus_get_sync failed");
+/* LCOV_EXCL_STOP */
 		return ACCOUNT_ERROR_PERMISSION_DENIED;
 	}
 /*
@@ -374,7 +388,9 @@ ACCOUNT_API int account_update_to_db_by_id(account_h account, int account_id)
 
 	AccountManager *acc_mgr = _account_manager_get_instance();
 	if (acc_mgr == NULL) {
+/* LCOV_EXCL_START */
 		_ERR("g_bus_get_sync failed");
+/* LCOV_EXCL_STOP */
 		return ACCOUNT_ERROR_PERMISSION_DENIED;
 	}
 
@@ -426,7 +442,9 @@ ACCOUNT_INTERNAL_API int account_update_to_db_by_id_without_permission(account_h
 
 	AccountManager *acc_mgr = _account_manager_get_instance();
 	if (acc_mgr == NULL) {
+/* LCOV_EXCL_START */
 		_ERR("g_bus_get_sync failed");
+/* LCOV_EXCL_STOP */
 		return ACCOUNT_ERROR_PERMISSION_DENIED;
 	}
 
@@ -446,7 +464,9 @@ ACCOUNT_INTERNAL_API int account_update_to_db_by_id_without_permission(account_h
 	GVariant *account_serialized = marshal_account((account_s *)account);
 	_INFO("after marshal() : account_id[%d]", account_id);
 	if (account_serialized == NULL) {
+/* LCOV_EXCL_START */
 		_ERR("Invalid input");
+/* LCOV_EXCL_STOP */
 		return ACCOUNT_ERROR_INVALID_PARAMETER;
 	}
 
@@ -478,7 +498,9 @@ ACCOUNT_API int account_update_to_db_by_user_name(account_h account, const char 
 
 	AccountManager *acc_mgr = _account_manager_get_instance();
 	if (acc_mgr == NULL) {
+/* LCOV_EXCL_START */
 		_ERR("g_bus_get_sync failed");
+/* LCOV_EXCL_STOP */
 		return ACCOUNT_ERROR_PERMISSION_DENIED;
 	}
 
@@ -518,8 +540,10 @@ ACCOUNT_API int account_create(account_h *account)
 
 	account_s *data = (account_s *)malloc(sizeof(account_s));
 	if (data == NULL) {
+/* LCOV_EXCL_START */
 		ACCOUNT_FATAL("Memory Allocation Failed");
 		return ACCOUNT_ERROR_OUT_OF_MEMORY;
+/* LCOV_EXCL_STOP */
 	}
 
 	ACCOUNT_MEMSET(data, 0, sizeof(account_s));
@@ -571,8 +595,10 @@ ACCOUNT_API int account_set_user_name(account_h account, const char *user_name)
 	_ACCOUNT_FREE(data->user_name);
 	data->user_name = _account_get_text(user_name);
 	if (data->user_name == NULL) {
+/* LCOV_EXCL_START */
 		ACCOUNT_FATAL("OUT OF MEMORY\n");
 		return ACCOUNT_ERROR_OUT_OF_MEMORY;
+/* LCOV_EXCL_STOP */
 	}
 
 	return ACCOUNT_ERROR_NONE;
@@ -595,8 +621,10 @@ ACCOUNT_API int account_set_display_name(account_h account, const char *display_
 	_ACCOUNT_FREE(data->display_name);
 	data->display_name = _account_get_text(display_name);
 	if (data->display_name == NULL) {
+/* LCOV_EXCL_START */
 		ACCOUNT_FATAL("OUT OF MEMORY\n");
 		return ACCOUNT_ERROR_OUT_OF_MEMORY;
+/* LCOV_EXCL_STOP */
 	}
 
 	return ACCOUNT_ERROR_NONE;
@@ -619,8 +647,10 @@ ACCOUNT_API int account_set_email_address(account_h account, const char *email_a
 	_ACCOUNT_FREE(data->email_address);
 	data->email_address = _account_get_text(email_address);
 	if (data->email_address == NULL) {
+/* LCOV_EXCL_START */
 		ACCOUNT_FATAL("OUT OF MEMORY\n");
 		return ACCOUNT_ERROR_OUT_OF_MEMORY;
+/* LCOV_EXCL_STOP */
 	}
 
 	return ACCOUNT_ERROR_NONE;
@@ -643,8 +673,10 @@ ACCOUNT_API int account_set_icon_path(account_h account, const char *icon_path)
 	_ACCOUNT_FREE(data->icon_path);
 	data->icon_path = _account_get_text(icon_path);
 	if (data->icon_path == NULL) {
+/* LCOV_EXCL_START */
 		ACCOUNT_FATAL("OUT OF MEMORY\n");
 		return ACCOUNT_ERROR_OUT_OF_MEMORY;
+/* LCOV_EXCL_STOP */
 	}
 
 	return ACCOUNT_ERROR_NONE;
@@ -666,8 +698,10 @@ ACCOUNT_API int account_set_source(account_h account, const char *source)
 	_ACCOUNT_FREE(data->source);
 	data->source = _account_get_text(source);
 	if (data->source == NULL) {
+/* LCOV_EXCL_START */
 		ACCOUNT_FATAL("OUT OF MEMORY\n");
 		return ACCOUNT_ERROR_OUT_OF_MEMORY;
+/* LCOV_EXCL_STOP */
 	}
 
 	return ACCOUNT_ERROR_NONE;
@@ -690,8 +724,10 @@ ACCOUNT_API int account_set_package_name(account_h account, const char *package_
 	_ACCOUNT_FREE(data->package_name);
 	data->package_name = _account_get_text(package_name);
 	if (data->package_name == NULL) {
+/* LCOV_EXCL_START */
 		ACCOUNT_FATAL("OUT OF MEMORY\n");
 		return ACCOUNT_ERROR_OUT_OF_MEMORY;
+/* LCOV_EXCL_STOP */
 	}
 
 	return ACCOUNT_ERROR_NONE;
@@ -713,8 +749,10 @@ ACCOUNT_API int account_set_domain_name(account_h account, const char *domain_na
 	_ACCOUNT_FREE(data->domain_name);
 	data->domain_name = _account_get_text(domain_name);
 	if (data->domain_name == NULL) {
+/* LCOV_EXCL_START */
 		ACCOUNT_FATAL("OUT OF MEMORY\n");
 		return ACCOUNT_ERROR_OUT_OF_MEMORY;
+/* LCOV_EXCL_STOP */
 	}
 
 	return ACCOUNT_ERROR_NONE;
@@ -737,8 +775,10 @@ ACCOUNT_API int account_set_access_token(account_h account, const char *access_t
 	_ACCOUNT_FREE(data->access_token);
 	data->access_token = _account_get_text(access_token);
 	if (data->access_token == NULL) {
+/* LCOV_EXCL_START */
 		ACCOUNT_FATAL("OUT OF MEMORY\n");
 		return ACCOUNT_ERROR_OUT_OF_MEMORY;
+/* LCOV_EXCL_STOP */
 	}
 
 	return ACCOUNT_ERROR_NONE;
@@ -765,8 +805,10 @@ ACCOUNT_API int account_set_user_text(account_h account, int idx, const char *us
 	_ACCOUNT_FREE(data->user_data_txt[idx]);
 	data->user_data_txt[idx] = _account_get_text(user_txt);
 	if (data->user_data_txt[idx] == NULL) {
+/* LCOV_EXCL_START */
 		ACCOUNT_FATAL("OUT OF MEMORY\n");
 		return ACCOUNT_ERROR_OUT_OF_MEMORY;
+/* LCOV_EXCL_STOP */
 	}
 
 	return ACCOUNT_ERROR_NONE;
@@ -804,8 +846,10 @@ ACCOUNT_API int account_set_custom(account_h account, const char *key, const cha
 			char *new_value = NULL;
 			new_value = _account_get_text(value);
 			if (new_value == NULL) {
+/* LCOV_EXCL_START */
 				ACCOUNT_FATAL("OUT OF MEMORY\n");
 				return ACCOUNT_ERROR_OUT_OF_MEMORY;
+/* LCOV_EXCL_STOP */
 			}
 
 			_ACCOUNT_FREE(custom_data->value);
@@ -820,8 +864,10 @@ ACCOUNT_API int account_set_custom(account_h account, const char *key, const cha
 
 		account_custom_s* custom_data = (account_custom_s *)malloc(sizeof(account_custom_s));
 		if (custom_data == NULL) {
+/* LCOV_EXCL_START */
 			ACCOUNT_FATAL("Memory Allocation Failed");
 			return ACCOUNT_ERROR_OUT_OF_MEMORY;
+/* LCOV_EXCL_STOP */
 		}
 
 		ACCOUNT_MEMSET(custom_data, 0, sizeof(account_custom_s));
@@ -836,22 +882,28 @@ ACCOUNT_API int account_set_custom(account_h account, const char *key, const cha
 */
 		custom_data->key = _account_get_text(key);
 		if (custom_data->key == NULL) {
+/* LCOV_EXCL_START */
 			ACCOUNT_FATAL("OUT OF MEMORY\n");
 			error_code = ACCOUNT_ERROR_OUT_OF_MEMORY;
+/* LCOV_EXCL_STOP */
 		}
 
 		custom_data->value = _account_get_text(value);
 		if (custom_data->value == NULL) {
+/* LCOV_EXCL_START */
 			ACCOUNT_FATAL("OUT OF MEMORY\n");
 			error_code = ACCOUNT_ERROR_OUT_OF_MEMORY;
+/* LCOV_EXCL_STOP */
 		}
 
 		if (error_code != ACCOUNT_ERROR_NONE) {
+/* LCOV_EXCL_START */
 			_ACCOUNT_FREE(custom_data->app_id);
 			_ACCOUNT_FREE(custom_data->key);
 			_ACCOUNT_FREE(custom_data->value);
 			_ACCOUNT_FREE(custom_data);
 			return error_code;
+/* LCOV_EXCL_STOP */
 		}
 
 		data->custom_list = g_slist_append(data->custom_list, (gpointer)custom_data);
@@ -944,18 +996,22 @@ ACCOUNT_API int account_set_capability(account_h account, const char *capability
 	if (b_is_new) {
 		account_capability_s *cap_data = (account_capability_s *)malloc(sizeof(account_capability_s));
 		if (cap_data == NULL) {
+/* LCOV_EXCL_START */
 			ACCOUNT_FATAL("Memory Allocation Failed");
 			return ACCOUNT_ERROR_OUT_OF_MEMORY;
+/* LCOV_EXCL_STOP */
 		}
 
 		ACCOUNT_MEMSET(cap_data, 0, sizeof(account_capability_s));
 
 		cap_data->type = _account_get_text(capability_type);
 		if (cap_data->type == NULL) {
+/* LCOV_EXCL_START */
 			ACCOUNT_FATAL("OUT OF MEMORY\n");
 			_ACCOUNT_FREE(cap_data->type);
 			_ACCOUNT_FREE(cap_data);
 			return ACCOUNT_ERROR_OUT_OF_MEMORY;
+/* LCOV_EXCL_STOP */
 		}
 
 		cap_data->value = capability_value;
@@ -978,8 +1034,10 @@ ACCOUNT_API int account_get_user_name(account_h account, char **user_name)
 	(*user_name) = NULL;
 	*user_name = _account_get_text(data->user_name);
 	if (data->user_name != NULL && *user_name == NULL) {
+/* LCOV_EXCL_START */
 		ACCOUNT_FATAL("OUT OF MEMORY\n");
 		return ACCOUNT_ERROR_OUT_OF_MEMORY;
+/* LCOV_EXCL_STOP */
 	}
 
 	return ACCOUNT_ERROR_NONE;
@@ -999,8 +1057,10 @@ ACCOUNT_API int account_get_display_name(account_h account, char **display_name)
 
 	*display_name = _account_get_text(data->display_name);
 	if (data->display_name != NULL && *display_name == NULL) {
+/* LCOV_EXCL_START */
 		ACCOUNT_FATAL("OUT OF MEMORY\n");
 		return ACCOUNT_ERROR_OUT_OF_MEMORY;
+/* LCOV_EXCL_STOP */
 	}
 
 
@@ -1021,8 +1081,10 @@ ACCOUNT_API int account_get_email_address(account_h account, char **email_addres
 
 	*email_address = _account_get_text(data->email_address);
 	if (data->email_address != NULL && *email_address == NULL) {
+/* LCOV_EXCL_START */
 		ACCOUNT_FATAL("OUT OF MEMORY\n");
 		return ACCOUNT_ERROR_OUT_OF_MEMORY;
+/* LCOV_EXCL_STOP */
 	}
 
 	return ACCOUNT_ERROR_NONE;
@@ -1042,8 +1104,10 @@ ACCOUNT_API int  account_get_icon_path(account_h account, char **icon_path)
 
 	*icon_path = _account_get_text(data->icon_path);
 	if (data->icon_path != NULL && *icon_path == NULL) {
+/* LCOV_EXCL_START */
 		ACCOUNT_FATAL("OUT OF MEMORY\n");
 		return ACCOUNT_ERROR_OUT_OF_MEMORY;
+/* LCOV_EXCL_STOP */
 	}
 
 	return ACCOUNT_ERROR_NONE;
@@ -1063,8 +1127,10 @@ ACCOUNT_API int account_get_source(account_h account, char **source)
 
 	*source = _account_get_text(data->source);
 	if (data->source != NULL && *source == NULL) {
+/* LCOV_EXCL_START */
 		ACCOUNT_FATAL("OUT OF MEMORY\n");
 		return ACCOUNT_ERROR_OUT_OF_MEMORY;
+/* LCOV_EXCL_STOP */
 	}
 
 	return ACCOUNT_ERROR_NONE;
@@ -1084,8 +1150,10 @@ ACCOUNT_API int account_get_package_name(account_h account, char **package_name)
 
 	*package_name = _account_get_text(data->package_name);
 	if (data->package_name != NULL && *package_name == NULL) {
+/* LCOV_EXCL_START */
 		ACCOUNT_FATAL("OUT OF MEMORY\n");
 		return ACCOUNT_ERROR_OUT_OF_MEMORY;
+/* LCOV_EXCL_STOP */
 	}
 
 
@@ -1106,8 +1174,10 @@ ACCOUNT_API int account_get_domain_name(account_h account, char **domain_name)
 
 	*domain_name = _account_get_text(data->domain_name);
 	if (data->domain_name != NULL && *domain_name == NULL) {
+/* LCOV_EXCL_START */
 		ACCOUNT_FATAL("OUT OF MEMORY\n");
 		return ACCOUNT_ERROR_OUT_OF_MEMORY;
+/* LCOV_EXCL_STOP */
 	}
 
 	return ACCOUNT_ERROR_NONE;
@@ -1127,8 +1197,10 @@ ACCOUNT_API int account_get_access_token(account_h account, char **access_token)
 
 	*access_token = _account_get_text(data->access_token);
 	if (data->access_token != NULL && *access_token == NULL) {
+/* LCOV_EXCL_START */
 		ACCOUNT_FATAL("OUT OF MEMORY\n");
 		return ACCOUNT_ERROR_OUT_OF_MEMORY;
+/* LCOV_EXCL_STOP */
 	}
 
 	return ACCOUNT_ERROR_NONE;
@@ -1150,8 +1222,10 @@ ACCOUNT_API int account_get_user_text(account_h account, int user_text_index, ch
 
 	*text = _account_get_text(data->user_data_txt[user_text_index]);
 	if (data->user_data_txt[user_text_index] != NULL && *text == NULL) {
+/* LCOV_EXCL_START */
 		ACCOUNT_FATAL("OUT OF MEMORY\n");
 		return ACCOUNT_ERROR_OUT_OF_MEMORY;
+/* LCOV_EXCL_STOP */
 	}
 
 	return ACCOUNT_ERROR_NONE;
@@ -1295,8 +1369,10 @@ ACCOUNT_API int account_get_custom(account_h account, const char *key, char **va
 			(*value) = NULL;
 			*value = _account_get_text(custom_data->value);
 			if (custom_data->value != NULL && *value == NULL) {
+/* LCOV_EXCL_START */
 				ACCOUNT_FATAL("OUT OF MEMORY\n");
 				return ACCOUNT_ERROR_OUT_OF_MEMORY;
+/* LCOV_EXCL_STOP */
 			}
 
 			return ACCOUNT_ERROR_NONE;
@@ -1338,8 +1414,10 @@ ACCOUNT_API int account_foreach_account_from_db(account_cb callback, void *user_
 
 	AccountManager *acc_mgr = _account_manager_get_instance();
 	if (acc_mgr == NULL) {
+/* LCOV_EXCL_START */
 		_ERR("g_bus_get_sync failed");
 		return ACCOUNT_ERROR_PERMISSION_DENIED;
+/* LCOV_EXCL_STOP */
 	}
 
 	GVariant *account_list_variant = NULL;
@@ -1387,8 +1465,10 @@ ACCOUNT_API int account_query_account_by_account_id(int account_db_id, account_h
 
 	AccountManager *acc_mgr = _account_manager_get_instance();
 	if (acc_mgr == NULL) {
+/* LCOV_EXCL_START */
 		_ERR("g_bus_get_sync failed");
 		return ACCOUNT_ERROR_PERMISSION_DENIED;
+/* LCOV_EXCL_STOP */
 	}
 
 	GVariant *account_variant = NULL;
@@ -1737,8 +1817,10 @@ ACCOUNT_API int account_type_create(account_type_h *account_type)
 
 	account_type_s *data = (account_type_s *)malloc(sizeof(account_type_s));
 	if (data == NULL) {
+/* LCOV_EXCL_START */
 		ACCOUNT_FATAL("Memory Allocation Failed");
 		return ACCOUNT_ERROR_OUT_OF_MEMORY;
+/* LCOV_EXCL_STOP */
 	}
 
 	ACCOUNT_MEMSET(data, 0, sizeof(account_type_s));
