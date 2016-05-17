@@ -1,7 +1,7 @@
 
 Name:       libaccount-service
 Summary:    Account DB library
-Version:    0.4.1
+Version:    0.4.2
 Release:    1
 Group:      Social & Content/API
 License:    Apache-2.0
@@ -49,7 +49,8 @@ Development files for %{name}
 #export   CFLAGS+=" -fno-omit-frame-pointer -fno-optimize-sibling-calls -fno-strict-aliasing -fno-unroll-loops -fsigned-char -fstrict-overflow -fno-common"
 #export CXXFLAGS+=" -fno-omit-frame-pointer -fno-optimize-sibling-calls -fno-strict-aliasing -fno-unroll-loops -fsigned-char -fstrict-overflow"
 
-export CFLAGS="${CFLAGS} -fPIC -fvisibility=hidden"
+export CFLAGS="${CFLAGS} -fPIC -fvisibility=hidden -fprofile-arcs -ftest-coverage"
+export LDFLAGS="${LDFLAGS} -lgcov"
 #cmake . -DCMAKE_INSTALL_PREFIX=/usr
 cmake . -DCMAKE_INSTALL_PREFIX=%{_prefix} \
 	-DLIBDIR=%{_libdir} \
