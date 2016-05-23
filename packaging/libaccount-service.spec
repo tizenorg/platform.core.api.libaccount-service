@@ -1,7 +1,7 @@
 
 Name:       libaccount-service
 Summary:    Account DB library
-Version:    0.4.1
+Version:    0.4.2
 Release:    1
 Group:      Social & Content/API
 License:    Apache-2.0

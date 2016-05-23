@@ -203,6 +203,8 @@ ACCOUNT_API int account_insert_to_db(account_h account, int *account_db_id)
 
 	_INFO("3. Before account_manager_call_account_add_sync");
 	bool is_success = account_manager_call_account_add_sync(acc_mgr, account_serialized, (int)getuid(), &db_id, NULL, &error);
+	g_variant_unref(account_serialized);
+
 	ACCOUNT_CATCH_ERROR((is_success != false), {}, _account_get_error_code(is_success, error), "Failed to get dbus.");
 	g_clear_error(&error);
 
@@ -393,6 +395,7 @@ ACCOUNT_API int account_update_to_db_by_id(account_h account, int account_id)
 	_INFO("3. Before account_manager_call_account_update_to_db_by_id_sync");
 	GVariant *account_serialized = marshal_account((account_s *)account);
 	is_success = account_manager_call_account_update_to_db_by_id_sync(acc_mgr, account_serialized, account_id, (int)getuid(), NULL, &error);
+	g_variant_unref(account_serialized);
 
 	if (!is_success) {
 		error_code = _account_get_error_code(is_success, error);
@@ -452,6 +455,7 @@ ACCOUNT_INTERNAL_API int account_update_to_db_by_id_without_permission(account_h
 
 	_INFO("before call update() : account_id[%d]", account_id);
 	is_success = account_manager_call_account_update_to_db_by_id_ex_sync(acc_mgr, account_serialized, account_id, (int)getuid(), NULL, &error);
+	g_variant_unref(account_serialized);
 
 	_INFO("after call update() : is_success=%d", is_success);
 	if (!is_success) {
@@ -496,6 +500,7 @@ ACCOUNT_API int account_update_to_db_by_user_name(account_h account, const char 
 
 	GVariant *account_serialized = marshal_account(account_data);
 	is_success = account_manager_call_account_update_to_db_by_user_name_sync(acc_mgr, account_serialized, user_name, package_name, (int)getuid(), NULL, &error);
+	g_variant_unref(account_serialized);
 
 	if (!is_success) {
 		error_code = _account_get_error_code(is_success, error);
@@ -1401,6 +1406,7 @@ ACCOUNT_API int account_query_account_by_account_id(int account_db_id, account_h
 
 	_INFO("before unmarshal_account");
 	account_s *account_data = umarshal_account(account_variant);
+	g_variant_unref(account_variant);
 	_INFO("after unmarshal_account");
 
 	if (account_data == NULL) {
@@ -1631,6 +1637,7 @@ ACCOUNT_API int account_query_capability_by_account_id(capability_cb callback, i
 		return error_code;
 
 	GSList *capability_list = unmarshal_capability_list(capability_list_variant);
+	g_variant_unref(capability_list_variant);
 
 	if (capability_list == NULL)
 		return ACCOUNT_ERROR_NO_DATA;
@@ -2265,6 +2272,7 @@ ACCOUNT_INTERNAL_API int account_type_insert_to_db(account_type_h account_type, 
 	int db_id = -1;
 	GVariant *account_type_serialized = marshal_account_type((account_type_s *)account_type);
 	bool is_success = account_manager_call_account_type_add_sync(acc_mgr, account_type_serialized, (int)getuid(), &db_id, NULL, &error);
+	g_variant_unref(account_type_serialized);
 
 	int ret = _account_get_error_code(is_success, error);
 	g_clear_error(&error);
@@ -2305,6 +2313,7 @@ ACCOUNT_INTERNAL_API int account_type_update_to_db_by_app_id(const account_type_
 	}
 
 	bool is_success = account_manager_call_account_type_update_to_db_by_app_id_sync(acc_mgr, account_type_variant, app_id, (int)getuid(), NULL, &error);
+	g_variant_unref(account_type_variant);
 
 	error_code = _account_get_error_code(is_success, error);
 	g_clear_error(&error);
