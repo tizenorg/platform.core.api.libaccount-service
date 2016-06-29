@@ -45,6 +45,8 @@
 
 #define APP_GID 100
 #define MIN_USER_UID 5000
+#define SERVICE_FW_UID 651
+#define SERVICE_FW_GID 651
 #define PW_BUF_LEN 4096
 
 typedef sqlite3_stmt * account_stmt;
@@ -93,13 +95,24 @@ static int _account_user_db_open(sqlite3 **p_hAccountDB, int mode, uid_t uid)
 		_account_user_db_close(*p_hAccountDB);
 
 	ACCOUNT_GET_USER_DB_DIR(account_db_dir, sizeof(account_db_dir), uid);
-	if ((-1 == access(account_db_dir, F_OK)) && uid != OWNER_ROOT)
-		mkdir(account_db_dir, 644);
-
-	if (mode == ACCOUNT_DB_OPEN_READWRITE)
+	if ((-1 == access(account_db_dir, F_OK)) && uid != OWNER_ROOT) {
+		int ret;
+		mkdir(account_db_dir, 777);
+		ret = chown(account_db_dir, SERVICE_FW_UID, SERVICE_FW_GID);
+		ACCOUNT_DEBUG("chown result = [%d]", ret);
+		ret = chmod(account_db_dir, S_IRUSR|S_IWUSR|S_IXUSR|S_IRGRP|S_IWGRP|S_IXGRP|S_IROTH|S_IWOTH|S_IXOTH);
+		ACCOUNT_DEBUG("chmod result = [%d]", ret);
 		rc = db_util_open(account_db_path, p_hAccountDB, DB_UTIL_REGISTER_HOOK_METHOD);
-	else
-		return ACCOUNT_ERROR_DB_NOT_OPENED;
+		ret = chown(account_db_path, SERVICE_FW_UID, SERVICE_FW_GID);
+		ACCOUNT_DEBUG("chown result = [%d]", ret);
+		ret = chmod(account_db_path, S_IRUSR|S_IWUSR|S_IRGRP|S_IWGRP);
+		ACCOUNT_DEBUG("chmod result = [%d]", ret);
+	} else {
+		if (mode == ACCOUNT_DB_OPEN_READWRITE)
+			rc = db_util_open(account_db_path, p_hAccountDB, DB_UTIL_REGISTER_HOOK_METHOD);
+		else
+			return ACCOUNT_ERROR_DB_NOT_OPENED;
+	}
 
 	if (_account_db_err_code(*p_hAccountDB) == SQLITE_PERM) {
 		ACCOUNT_ERROR("Access failed(%s)", _account_db_err_msg(*p_hAccountDB));
@@ -156,13 +169,24 @@ static int _account_global_db_open(int mode)
 
 	if (!g_hAccountGlobalDB) {
 		ACCOUNT_GET_USER_DB_DIR(account_db_dir, sizeof(account_db_dir), uid);
-		if ((-1 == access(account_db_dir, F_OK)) && uid != OWNER_ROOT)
-			mkdir(account_db_dir, 644);
-
-		if (mode == ACCOUNT_DB_OPEN_READWRITE)
+		if ((-1 == access(account_db_dir, F_OK)) && uid != OWNER_ROOT) {
+			int ret;
+			mkdir(account_db_dir, 777);
+			ret = chown(account_db_dir, SERVICE_FW_UID, SERVICE_FW_GID);
+			ACCOUNT_DEBUG("chown result = [%d]", ret);
+			ret = chmod(account_db_dir, S_IRUSR|S_IWUSR|S_IXUSR|S_IRGRP|S_IWGRP|S_IXGRP|S_IROTH|S_IWOTH|S_IXOTH);
+			ACCOUNT_DEBUG("chmod result = [%d]", ret);
 			rc = db_util_open(account_db_path, &g_hAccountGlobalDB, DB_UTIL_REGISTER_HOOK_METHOD);
-		else
-			return ACCOUNT_ERROR_DB_NOT_OPENED;
+			ret = chown(account_db_path, SERVICE_FW_UID, SERVICE_FW_GID);
+			ACCOUNT_DEBUG("chown result = [%d]", ret);
+			ret = chmod(account_db_path, S_IRUSR|S_IWUSR|S_IRGRP|S_IWGRP);
+			ACCOUNT_DEBUG("chmod result = [%d]", ret);
+		} else {
+			if (mode == ACCOUNT_DB_OPEN_READWRITE)
+				rc = db_util_open(account_db_path, &g_hAccountGlobalDB, DB_UTIL_REGISTER_HOOK_METHOD);
+			else
+				return ACCOUNT_ERROR_DB_NOT_OPENED;
+		}
 
 		if (_account_db_err_code(g_hAccountGlobalDB) == SQLITE_PERM) {
 			ACCOUNT_ERROR("Access failed(%s)", _account_db_err_msg(g_hAccountGlobalDB));
