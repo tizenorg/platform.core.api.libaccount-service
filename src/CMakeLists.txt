@@ -21,6 +21,7 @@ pkg_check_modules(clientpkgs REQUIRED
 		vconf
 		account-common
 		db-util
+		pkgmgr-installer
 )
 
 FOREACH(flag ${clientpkgs_CFLAGS})

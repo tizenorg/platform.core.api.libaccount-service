@@ -1,7 +1,7 @@
 
 Name:       libaccount-service
 Summary:    Account DB library
-Version:    0.4.4
+Version:    0.4.5
 Release:    1
 Group:      Social & Content/API
 License:    Apache-2.0
@@ -15,6 +15,7 @@ BuildRequires:	pkgconfig(glib-2.0) >= 2.26
 BuildRequires:  pkgconfig(gio-unix-2.0)
 BuildRequires:  pkgconfig(account-common)
 BuildRequires:  pkgconfig(db-util)
+BuildRequires:  pkgconfig(pkgmgr-installer)
 
 
 %if "%{?profile}" == "tv"

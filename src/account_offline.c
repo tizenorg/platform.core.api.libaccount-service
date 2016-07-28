@@ -27,6 +27,7 @@
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <pwd.h>
+#include <pkgmgr_installer_info.h>
 
 #include <dbg.h>
 #include <account_free.h>
@@ -157,7 +158,11 @@ static int _account_global_db_open(int mode)
 	ACCOUNT_MEMSET(account_db_dir, 0x00, sizeof(account_db_dir));
 	ACCOUNT_MEMSET(account_db_path, 0x00, sizeof(account_db_path));
 
-	uid = getuid();
+	if (pkgmgr_installer_info_get_target_uid(&uid) < 0) {
+		ACCOUNT_ERROR("pkgmgr_installer_info_get_target_uid() fail");
+		return ACCOUNT_ERROR_DB_NOT_OPENED;
+	}
+
 	if (uid != OWNER_ROOT && uid != GLOBAL_USER) {
 		ACCOUNT_ERROR("global db open fail. user not both root or global user");
 		return ACCOUNT_ERROR_PERMISSION_DENIED;
@@ -277,7 +282,11 @@ ACCOUNT_INTERNAL_API int account_type_insert_to_db_offline(account_type_h accoun
 		goto RETURN;
 	}
 
-	uid = getuid();
+	if (pkgmgr_installer_info_get_target_uid(&uid) < 0) {
+		ACCOUNT_ERROR("pkgmgr_installer_info_get_target_uid() fail");
+		return ACCOUNT_ERROR_DB_NOT_OPENED;
+	}
+
 	if (uid != OWNER_ROOT && uid != GLOBAL_USER) {
 		_ERR("current process is not root user nor global user, uid=%d", uid);
 		goto RETURN;
@@ -333,7 +342,12 @@ ACCOUNT_INTERNAL_API int account_type_delete_by_app_id_offline(const char *app_i
 		goto RETURN;
 	}
 
-	uid_t uid = getuid();
+	uid_t uid;
+	if (pkgmgr_installer_info_get_target_uid(&uid) < 0) {
+		ACCOUNT_ERROR("pkgmgr_installer_info_get_target_uid() fail");
+		return ACCOUNT_ERROR_DB_NOT_OPENED;
+	}
+
 	if (uid != OWNER_ROOT && uid != GLOBAL_USER) {
 		_ERR("current daemon is not root user, uid=%d", uid);
 		goto RETURN;
@@ -374,7 +388,11 @@ ACCOUNT_INTERNAL_API int account_delete_from_db_by_package_name_offline(const ch
 
 	ACCOUNT_RETURN_VAL((package_name != NULL), {}, ACCOUNT_ERROR_INVALID_PARAMETER, ("package_name is null!"));
 
-	uid = getuid();
+	if (pkgmgr_installer_info_get_target_uid(&uid) < 0) {
+		ACCOUNT_ERROR("pkgmgr_installer_info_get_target_uid() fail");
+		return ACCOUNT_ERROR_DB_NOT_OPENED;
+	}
+
 	if (uid != 0) {
 		_ERR("current process user is not root, uid=%d", uid);
 		return_code = ACCOUNT_ERROR_PERMISSION_DENIED;
